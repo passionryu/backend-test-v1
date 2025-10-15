@@ -4,7 +4,9 @@ import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
 import im.bigs.pg.domain.payment.PaymentStatus
+import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Base64
@@ -20,13 +22,17 @@ import java.security.MessageDigest
  */
 @Component
 class TestPgClient(
-    private val baseUrl: String = "https://api-test-pg.bigs.im",
-    private val apiKey: String = "<API-KEY>",        // 실제 발급받은 API-KEY
-    private val ivBase64: String = "<IV_B64URL>"     // 서버 등록된 IV
+    private val webClient: WebClient
 ) : PgClientOutPort {
 
-    override fun supports(partnerId: Long): Boolean = true // 모든 제휴사 지원, 필요시 조건 변경
+    private val baseUrl= "https://api-test-pg.bigs.im"
+    private val apiKey = "11111111-1111-4111-8111-111111111111"
+    private val ivBase64 = "AAAAAAAAAAAAAAAA"
 
+    // 기존 MockPgClient에 있던 로직 그대로 적용
+    override fun supports(partnerId: Long): Boolean = partnerId % 2L == 1L
+
+    // 결재 승인 메서드
     override fun approve(request: PgApproveRequest): PgApproveResult {
         // 평문 JSON 생성
         val plainJson = """
@@ -42,8 +48,14 @@ class TestPgClient(
         // AES-256-GCM 암호화
         val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
 
-        // TODO: HTTP POST 요청으로 Test PG 서버에 전달하고 결과 수신
-        // 예시: enc를 JSON { "enc": enc } 로 POST /api/v1/pay/credit-card
+        // 실제 PG 서버 호출
+        val response = webClient.post()
+            .uri("$baseUrl/api/v1/pay/credit-card")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(mapOf("enc" to enc))
+            .retrieve()
+            .bodyToMono(PgApproveApiResponse::class.java)
+            .block()
 
         // 여기서는 예시로 승인 성공을 반환
         return PgApproveResult(
@@ -53,6 +65,10 @@ class TestPgClient(
         )
     }
 
+    /**
+     * 평문 JSON → AES-256-GCM 암호문(Base64URL) 변환합니다.
+     * * 추후, 다른 Util 도메인에 책임 넘기기
+     */
     private fun encryptAesGcm(plainText: String, apiKey: String, ivB64: String): String {
         val keyBytes = MessageDigest.getInstance("SHA-256").digest(apiKey.toByteArray(Charsets.UTF_8))
         val keySpec = SecretKeySpec(keyBytes, "AES")
@@ -63,4 +79,11 @@ class TestPgClient(
         val cipherText = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
     }
+
+    data class PgApproveApiResponse(
+        val approvalCode: String,
+        val approvedAt: String,
+        val status: String
+    )
+
 }
