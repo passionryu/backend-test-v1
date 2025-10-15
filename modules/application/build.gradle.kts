@@ -13,4 +13,8 @@ dependencies {
 
     // For Using TestPgClient
     implementation(project(":modules:external:pg-client"))
+
+    // For using common dir
+    implementation(project(":modules:common"))
+
 }
