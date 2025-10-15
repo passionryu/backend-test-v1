@@ -1,4 +1,4 @@
-package im.bigs.pg.application.pg.port.out
+package im.bigs.pg.common.pg
 
 import java.math.BigDecimal
 
