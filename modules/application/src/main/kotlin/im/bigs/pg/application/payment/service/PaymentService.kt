@@ -30,13 +30,17 @@ class PaymentService(
      * - 과제: 제휴사별 수수료 정책을 적용하도록 개선해 보세요.
      */
     override fun pay(command: PaymentCommand): Payment {
+
+        // 결제를 요청하는 파트너사 객체를 DB에서 반환
         val partner = partnerRepository.findById(command.partnerId)
             ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
         require(partner.active) { "Partner is inactive: ${partner.id}" }
 
+        // 승인, 정산을 담당하는 결제 대행사 첫번째 객체를 반환 (없을 시 null)
         val pgClient = pgClients.firstOrNull { it.supports(partner.id) }
             ?: throw IllegalStateException("No PG client for partner ${partner.id}")
 
+        // 결제 대행사에서 승인 요청 객체를 반환
         val approve = pgClient.approve(
             PgApproveRequest(
                 partnerId = partner.id,
@@ -46,9 +50,15 @@ class PaymentService(
                 productName = command.productName,
             ),
         )
+
+        // 임시 하드코딩
         val hardcodedRate = java.math.BigDecimal("0.0300")
         val hardcodedFixed = java.math.BigDecimal("100")
+
+        // Domain 레이어의 util 비즈니스 로직 호출
         val (fee, net) = FeeCalculator.calculateFee(command.amount, hardcodedRate, hardcodedFixed)
+
+        // 결재 이력 스냅샷 객체 반환
         val payment = Payment(
             partnerId = partner.id,
             amount = command.amount,
@@ -62,6 +72,7 @@ class PaymentService(
             status = PaymentStatus.APPROVED,
         )
 
+        // OutBound Port를 호출하여 DB에 저장
         return paymentRepository.save(payment)
     }
 }
