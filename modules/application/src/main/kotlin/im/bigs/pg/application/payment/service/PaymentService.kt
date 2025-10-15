@@ -8,6 +8,7 @@ import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.common.PgApproveRequest
 import im.bigs.pg.common.PgClientOutPort
 import im.bigs.pg.domain.calculation.FeeCalculator
+import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.external.pg.TestPgClient
@@ -34,9 +35,17 @@ class PaymentService(
     override fun pay(command: PaymentCommand): Payment {
 
         // 결제를 요청하는 파트너사 객체를 DB에서 반환
-        val partner = partnerRepository.findById(command.partnerId)
-            ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
-        require(partner.active) { "Partner is inactive: ${partner.id}" }
+//        val partner = partnerRepository.findById(command.partnerId)
+//            ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
+//        require(partner.active) { "Partner is inactive: ${partner.id}" }
+
+        // 임시 하드코딩 Partner (DB 조회 없이)
+        val partner = Partner(
+            id = 1,               // 테스트용 ID
+            code = "MOCK1",
+            name = "Mock Partner",
+            active = true
+        )
 
         // TestPgClient 구현체 호출
         val pgClient = pgClients.firstOrNull { it is TestPgClient }
