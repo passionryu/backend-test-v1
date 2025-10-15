@@ -10,4 +10,7 @@ dependencies {
     implementation(projects.modules.domain)
     // Only need Spring annotations (@Service) for this module
     implementation("org.springframework:spring-context")
+
+    // For Using TestPgClient
+    implementation(project(":modules:external:pg-client"))
 }
