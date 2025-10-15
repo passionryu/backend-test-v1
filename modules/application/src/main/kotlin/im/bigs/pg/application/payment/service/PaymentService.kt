@@ -2,16 +2,16 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.application.partner.port.out.PartnerOutPort
-import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
+import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
-import im.bigs.pg.application.pg.port.out.PgApproveRequest
-import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.common.PgApproveRequest
+import im.bigs.pg.common.PgClientOutPort
 import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
-import org.springframework.stereotype.Service
 import im.bigs.pg.external.pg.TestPgClient
+import org.springframework.stereotype.Service
 
 
 /**
