@@ -53,22 +53,6 @@ class PaymentService(
             ),
         )
 
-        /* 이전 MockPgClient 호출 비즈니스 로직 */
-//        // 승인, 정산을 담당하는 결제 대행사 첫번째 객체를 반환 (없을 시 null)
-//        val pgClient = pgClients.firstOrNull { it.supports(partner.id) }
-//            ?: throw IllegalStateException("No PG client for partner ${partner.id}")
-//
-//        // 결제 대행사에서 승인 요청 객체를 반환
-//        val approve = pgClient.approve(
-//            PgApproveRequest(
-//                partnerId = partner.id,
-//                amount = command.amount,
-//                cardBin = command.cardBin,
-//                cardLast4 = command.cardLast4,
-//                productName = command.productName,
-//            ),
-//        )
-
         // 임시 하드코딩
         val hardcodedRate = java.math.BigDecimal("0.0300")
         val hardcodedFixed = java.math.BigDecimal("100")
