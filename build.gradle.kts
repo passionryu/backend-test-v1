@@ -39,9 +39,6 @@ allprojects {
         implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1")
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-        // WebClient
-        implementation("org.springframework.boot:spring-boot-starter-webflux")
-
         // test
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
         testImplementation("io.mockk:mockk:1.13.5")
@@ -110,5 +107,10 @@ project(":modules:external") {
         apply(plugin = "org.springframework.boot")
         apply(plugin = "io.spring.dependency-management")
         apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+
+        dependencies {
+            // WebClient
+            implementation("org.springframework.boot:spring-boot-starter-webflux")
+        }
     }
 }
