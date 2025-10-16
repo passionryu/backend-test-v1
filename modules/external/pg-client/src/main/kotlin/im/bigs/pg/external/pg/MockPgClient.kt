@@ -17,7 +17,13 @@ import kotlin.random.Random
  */
 @Component
 class MockPgClient : PgClientOutPort {
-    override fun supports(partnerId: Long): Boolean = partnerId % 2L == 1L
+
+    /**
+     * 해당 구현체 비활성화
+     * - Boolean = true : 활성화
+     * - Boolean = false : 비활성화
+     */
+    override fun supports(partnerId: Long): Boolean = false
 
     override fun approve(request: PgApproveRequest): PgApproveResult {
         val dateOfMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("MMdd"))

@@ -29,19 +29,17 @@ class TestPgClient(
     private val apiKey = "11111111-1111-4111-8111-111111111111"
     private val ivBase64 = "AAAAAAAAAAAAAAAA"
 
-    // 기존 MockPgClient에 있던 로직 그대로 적용
-    override fun supports(partnerId: Long): Boolean = partnerId % 2L == 1L
+    /**
+     * 해당 구현체 활성화
+     * - Boolean = true : 활성화
+     * - Boolean = false : 비활성화
+     */
+    override fun supports(partnerId: Long): Boolean = true
 
     // 결재 승인 메서드
     override fun approve(request: PgApproveRequest): PgApproveResult {
 
-        /* 바이트 검증 코드 */
-        val ivBytes = Base64.getUrlDecoder().decode(ivBase64)
-        println("IV bytes length = ${ivBytes.size}") // → 12 출력되어야 함
-
         // 평문 JSON 생성 - 카드 번호를 올바른 형식으로 생성
-        // cardBin이 "1111"이고 cardLast4가 "1111"인 경우 "1111-1111-1111-1111"이 되어야 함
-        // val cardNumber = "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}"
         val plainJson = """
         {
             "cardNumber": "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}",
@@ -52,13 +50,9 @@ class TestPgClient(
         }
         """.trimIndent()
 
-        println("Plain JSON: $plainJson")
-
         // 암호화 수행
         val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
-
         val requestBody = mapOf("enc" to enc)
-        println("Request Body: $requestBody")
 
         // 실제 PG 서버 호출
         try {

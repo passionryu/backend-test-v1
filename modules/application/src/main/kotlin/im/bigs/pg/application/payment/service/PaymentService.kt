@@ -8,10 +8,8 @@ import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.common.PgApproveRequest
 import im.bigs.pg.common.PgClientOutPort
 import im.bigs.pg.domain.calculation.FeeCalculator
-import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
-import im.bigs.pg.external.pg.TestPgClient
 import org.springframework.stereotype.Service
 
 
@@ -39,13 +37,9 @@ class PaymentService(
             ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
         require(partner.active) { "Partner is inactive: ${partner.id}" }
 
-        /* 파트너사 정보 임시 출력 */
-        println("Partner is active: ${partner.active}")
-        println("Partner id: ${partner.id}")
-
-        // TestPgClient 구현체 호출
-        val pgClient = pgClients.firstOrNull { it is TestPgClient }
-            ?: throw IllegalStateException("No TestPgClient found")
+        // PgClientOutPort를 통한 TestPgClient 구현체 호출 (헥사고날 아키텍처 보존)
+        val pgClient = pgClients.firstOrNull { it.supports(partner.id) }
+            ?: throw IllegalStateException("No PG client supports partner: ${partner.id}")
 
         // 결제 대행사에서 승인 요청 객체를 반환
         val approve = pgClient.approve(
