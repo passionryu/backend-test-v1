@@ -39,8 +39,8 @@ class TestPgClient(
     // 결재 승인 메서드
     override fun approve(request: PgApproveRequest): PgApproveResult {
 
-        // 평문 JSON 생성 - 카드 번호를 올바른 형식으로 생성
-        val plainJson = """
+        try {
+            val plainJson = """
         {
             "cardNumber": "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}",
             "birthDate": "${request.birthDate}",
@@ -50,12 +50,9 @@ class TestPgClient(
         }
         """.trimIndent()
 
-        // 암호화 수행
-        val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
-        val requestBody = mapOf("enc" to enc)
+            val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
+            val requestBody = mapOf("enc" to enc)
 
-        // 실제 PG 서버 호출
-        try {
             val response = webClient.post()
                 .uri("$baseUrl/api/v1/pay/credit-card")
                 .header("API-KEY", apiKey)
@@ -65,20 +62,28 @@ class TestPgClient(
                 .bodyToMono(PgApproveApiResponse::class.java)
                 .block()
 
-            println("API Response: $response")
-
-            // 실제 응답을 사용하여 결과 반환
-            return PgApproveResult(
-                approvalCode = response?.approvalCode ?: "UNKNOWN",
-                approvedAt = response?.approvedAt?.let { 
-                    LocalDateTime.parse(it.substringBefore('.'))
-                } ?: LocalDateTime.now(ZoneOffset.UTC),
-                status = if (response?.status == "APPROVED") PaymentStatus.APPROVED else PaymentStatus.CANCELED
-            )
+            return if (response?.status == "APPROVED") {
+                PgApproveResult(
+                    approvalCode = response.approvalCode,
+                    approvedAt = LocalDateTime.parse(response.approvedAt.substringBefore('.')),
+                    status = PaymentStatus.APPROVED
+                )
+            } else {
+                PgApproveResult(
+                    approvalCode = null,
+                    approvedAt = null,
+                    status = PaymentStatus.CANCELED,
+                    failureReason = response?.status ?: "Unknown failure"
+                )
+            }
         } catch (e: Exception) {
-            println("API 호출 실패: ${e.message}")
-            e.printStackTrace()
-            throw e
+            // 예외 발생 시 실패로 처리
+            return PgApproveResult(
+                approvalCode = null,
+                approvedAt = null,
+                status = PaymentStatus.CANCELED,
+                failureReason = e.message ?: "Unknown error"
+            )
         }
     }
 

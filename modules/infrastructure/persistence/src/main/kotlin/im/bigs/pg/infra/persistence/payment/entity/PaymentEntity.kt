@@ -32,12 +32,16 @@ class PaymentEntity(
     var cardBin: String? = null,
     @Column(length = 4)
     var cardLast4: String? = null,
-    @Column(nullable = false, length = 32)
-    var approvalCode: String,
-    @Column(nullable = false)
-    var approvedAt: Instant,
+    @Column(nullable = true, length = 32)
+    var approvalCode: String? = null,
+    @Column(nullable = true)
+    var approvedAt: Instant? = null,
     @Column(nullable = false, length = 20)
     var status: String,
+    @Column(length = 255)
+    var canceledReason: String? = null,
+    @Column
+    var failedAt: Instant? = null,
     @Column(nullable = false)
     var createdAt: Instant,
     @Column(nullable = false)

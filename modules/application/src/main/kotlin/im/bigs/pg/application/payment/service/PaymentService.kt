@@ -11,7 +11,8 @@ import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import org.springframework.stereotype.Service
-
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 /**
  * 결제 생성 유스케이스 구현체.
@@ -37,7 +38,7 @@ class PaymentService(
             ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
         require(partner.active) { "Partner is inactive: ${partner.id}" }
 
-        // PgClientOutPort를 통한 TestPgClient 구현체 호출 (헥사고날 아키텍처 보존)
+        // PgClient 호출 ( 포트-어뎁터 원칙 )
         val pgClient = pgClients.firstOrNull { it.supports(partner.id) }
             ?: throw IllegalStateException("No PG client supports partner: ${partner.id}")
 
@@ -63,18 +64,46 @@ class PaymentService(
         val (fee, net) = FeeCalculator.calculateFee(command.amount, feePolicy.percentage, feePolicy.fixedFee)
 
         // 결재 이력 스냅샷 객체 반환
-        val payment = Payment(
-            partnerId = partner.id,
-            amount = command.amount,
-            appliedFeeRate = feePolicy.percentage,
-            feeAmount = fee,
-            netAmount = net,
-            cardBin = command.cardBin,
-            cardLast4 = command.cardLast4,
-            approvalCode = approve.approvalCode,
-            approvedAt = approve.approvedAt,
-            status = PaymentStatus.APPROVED,
-        )
+//        val payment = Payment(
+//            partnerId = partner.id,
+//            amount = command.amount,
+//            appliedFeeRate = feePolicy.percentage,
+//            feeAmount = fee,
+//            netAmount = net,
+//            cardBin = command.cardBin,
+//            cardLast4 = command.cardLast4,
+//            approvalCode = approve.approvalCode,
+//            approvedAt = approve.approvedAt,
+//            status = approve.status
+//        )
+
+        val payment = if (approve.status == PaymentStatus.APPROVED) {
+            Payment(
+                partnerId = partner.id,
+                amount = command.amount,
+                appliedFeeRate = feePolicy.percentage,
+                feeAmount = fee,
+                netAmount = net,
+                cardBin = command.cardBin,
+                cardLast4 = command.cardLast4,
+                approvalCode = approve.approvalCode,
+                approvedAt = approve.approvedAt,
+                status = PaymentStatus.APPROVED
+            )
+        } else {
+            Payment(
+                partnerId = partner.id,
+                amount = command.amount,
+                appliedFeeRate = feePolicy.percentage,
+                feeAmount = fee,
+                netAmount = net,
+                cardBin = command.cardBin,
+                cardLast4 = command.cardLast4,
+                status = PaymentStatus.CANCELED,
+                canceledReason = approve.failureReason,  // PG API 실패 메시지
+                failedAt = LocalDateTime.now(ZoneOffset.UTC)
+            )
+        }
 
         // OutBound Port를 호출하여 DB에 저장
         return paymentRepository.save(payment)
