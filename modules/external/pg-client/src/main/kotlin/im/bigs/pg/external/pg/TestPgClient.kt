@@ -7,13 +7,15 @@ import im.bigs.pg.domain.payment.PaymentStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import java.security.MessageDigest
+import java.time.Duration
 import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.util.Base64
+import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import java.security.MessageDigest
+import kotlinx.coroutines.reactor.awaitSingle
+
 
 /**
  * 실제 Test PG 서버 연동 구현체
@@ -37,7 +39,7 @@ class TestPgClient(
     override fun supports(partnerId: Long): Boolean = true
 
     // 결재 승인 메서드
-    override fun approve(request: PgApproveRequest): PgApproveResult {
+    override suspend fun approve(request: PgApproveRequest): PgApproveResult {
 
         try {
             val plainJson = """
@@ -51,24 +53,29 @@ class TestPgClient(
         """.trimIndent()
 
             val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
-            val requestBody = mapOf("enc" to enc)
+            val requestBody = mapOf("enc" to enc) // map -> json으로 직렬화 작업
 
+            // WebClient 요청 (논블로킹, 타임아웃 적용)
             val response = webClient.post()
                 .uri("$baseUrl/api/v1/pay/credit-card")
                 .header("API-KEY", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
+                // 10초 이상 응답이 없으면 TimeoutException 발생
                 .bodyToMono(PgApproveApiResponse::class.java)
-                .block()
+                .timeout(Duration.ofSeconds(10))
+                .awaitSingle() // suspend/Coroutine 환경에서 논블로킹 호출
 
             return if (response?.status == "APPROVED") {
+                // 결제 승인 시나리오
                 PgApproveResult(
                     approvalCode = response.approvalCode,
                     approvedAt = LocalDateTime.parse(response.approvedAt.substringBefore('.')),
                     status = PaymentStatus.APPROVED
                 )
             } else {
+                // 결제 미승인 시나리오
                 PgApproveResult(
                     approvalCode = null,
                     approvedAt = null,
@@ -102,6 +109,8 @@ class TestPgClient(
         return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
     }
 
+    // 이게 여기있는게 맞나...??
+    // pgserver에서 오는 응답을 역직렬화 하는 DTO
     data class PgApproveApiResponse(
         val approvalCode: String,
         val approvedAt: String,

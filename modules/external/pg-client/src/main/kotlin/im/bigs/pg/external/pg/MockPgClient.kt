@@ -25,7 +25,7 @@ class MockPgClient : PgClientOutPort {
      */
     override fun supports(partnerId: Long): Boolean = false
 
-    override fun approve(request: PgApproveRequest): PgApproveResult {
+    override suspend fun approve(request: PgApproveRequest): PgApproveResult {
         val dateOfMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("MMdd"))
         val randomDigits = Random.nextInt(9999).toString().padStart(4, '0')
         return PgApproveResult(

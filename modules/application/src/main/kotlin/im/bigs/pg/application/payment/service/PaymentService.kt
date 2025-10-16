@@ -31,7 +31,7 @@ class PaymentService(
      * - 제휴사별 수수료 정책을 조회하여 실제 정책을 적용합니다.
      * - 하드코딩된 수수료 계산을 제거하고 동적 정책 조회로 변경합니다.
      */
-    override fun pay(command: PaymentCommand): Payment {
+    override suspend fun pay(command: PaymentCommand): Payment {
 
         // 결제를 요청하는 파트너사 객체를 DB에서 조회
         val partner = partnerRepository.findById(command.partnerId)
@@ -64,19 +64,6 @@ class PaymentService(
         val (fee, net) = FeeCalculator.calculateFee(command.amount, feePolicy.percentage, feePolicy.fixedFee)
 
         // 결재 이력 스냅샷 객체 반환
-//        val payment = Payment(
-//            partnerId = partner.id,
-//            amount = command.amount,
-//            appliedFeeRate = feePolicy.percentage,
-//            feeAmount = fee,
-//            netAmount = net,
-//            cardBin = command.cardBin,
-//            cardLast4 = command.cardLast4,
-//            approvalCode = approve.approvalCode,
-//            approvedAt = approve.approvedAt,
-//            status = approve.status
-//        )
-
         val payment = if (approve.status == PaymentStatus.APPROVED) {
             Payment(
                 partnerId = partner.id,
@@ -100,7 +87,7 @@ class PaymentService(
                 cardBin = command.cardBin,
                 cardLast4 = command.cardLast4,
                 status = PaymentStatus.CANCELED,
-                canceledReason = approve.failureReason,  // PG API 실패 메시지
+                canceledReason = approve.failureReason,
                 failedAt = LocalDateTime.now(ZoneOffset.UTC)
             )
         }

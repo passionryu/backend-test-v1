@@ -16,7 +16,7 @@ class MockFailedPgClient : PgClientOutPort {
      */
     override fun supports(partnerId: Long) = false
 
-    override fun approve(request: PgApproveRequest) = PgApproveResult(
+    override suspend fun approve(request: PgApproveRequest) = PgApproveResult(
         approvalCode = null,
         approvedAt = null,
         status = PaymentStatus.CANCELED,

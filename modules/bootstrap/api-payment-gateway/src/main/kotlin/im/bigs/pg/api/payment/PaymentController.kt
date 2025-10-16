@@ -44,7 +44,7 @@ class PaymentController(
      * @return 생성된 결제 요약 응답
      */
     @PostMapping
-    fun create(@RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
+    suspend fun create(@RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
         val saved = paymentUseCase.pay(
             PaymentCommand(
                 partnerId = req.partnerId,
