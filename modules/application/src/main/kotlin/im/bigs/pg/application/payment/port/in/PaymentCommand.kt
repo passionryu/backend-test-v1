@@ -16,6 +16,9 @@ data class PaymentCommand(
     val amount: BigDecimal,
     val cardBin: String? = null,
     val cardLast4: String? = null,
+    val birthDate: String,
+    val expiry: String,
+    val password: String,
     val productName: String? = null,
 )
 

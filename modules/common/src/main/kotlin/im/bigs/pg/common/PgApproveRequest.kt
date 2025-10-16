@@ -8,5 +8,8 @@ data class PgApproveRequest(
     val amount: BigDecimal,
     val cardBin: String?,
     val cardLast4: String?,
+    val birthDate: String,
+    val expiry: String,
+    val password: String,
     val productName: String?,
 )
