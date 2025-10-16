@@ -16,10 +16,10 @@ README.md를 기반으로 분석한 결과, 다음과 같은 주요 구현 과�
 ### 🔥 **1단계: 핵심 기능 구현 (필수)**
 
 #### 1.1 TestPg API 연동 구현
-- [ ] **TestPg API 문서 분석** ([참고자료](https://api-test-pg.bigs.im/docs/index.html))
-- [ ] **external/pg-client 모듈에 TestPg 어댑터 구현**
-- [ ] **PgClientOutPort 인터페이스 구현체 작성**
-- [ ] **REST API 호출 로직 구현**
+- [x] **TestPg API 문서 분석** ([참고자료](https://api-test-pg.bigs.im/docs/index.html))
+- [x] **external/pg-client 모듈에 TestPg 어댑터 구현**
+- [x] **PgClientOutPort 인터페이스 구현체 작성**
+- [x] **REST API 호출 로직 구현**
 - [ ] **에러 처리 및 재시도 로직 추가**
 
 #### 1.2 결제 생성 API 완성
