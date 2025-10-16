@@ -41,17 +41,17 @@ class TestPgClient(
 
         // 평문 JSON 생성 - 카드 번호를 올바른 형식으로 생성
         // cardBin이 "1111"이고 cardLast4가 "1111"인 경우 "1111-1111-1111-1111"이 되어야 함
-        val cardNumber = "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}"
+        // val cardNumber = "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}"
         val plainJson = """
-            {
-                "cardNumber": "$cardNumber",
-                "birthDate": "19900101",
-                "expiry": "1227",
-                "password": "12",
-                "amount": ${request.amount}
-            }
+        {
+            "cardNumber": "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}",
+            "birthDate": "${request.birthDate}",
+            "expiry": "${request.expiry}",
+            "password": "${request.password}",
+            "amount": ${request.amount}
+        }
         """.trimIndent()
-        
+
         println("Plain JSON: $plainJson")
 
         // 암호화 수행
