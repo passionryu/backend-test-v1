@@ -1,4 +1,4 @@
-package im.bigs.pg.application.pg.port.out
+package im.bigs.pg.common
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import im.bigs.pg.domain.payment.PaymentStatus

@@ -1,8 +1,8 @@
 package im.bigs.pg.external.pg
 
-import im.bigs.pg.application.pg.port.out.PgApproveRequest
-import im.bigs.pg.application.pg.port.out.PgApproveResult
-import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.common.PgApproveRequest
+import im.bigs.pg.common.PgApproveResult
+import im.bigs.pg.common.PgClientOutPort
 import im.bigs.pg.domain.payment.PaymentStatus
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime

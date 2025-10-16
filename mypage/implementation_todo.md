@@ -16,18 +16,18 @@ README.md를 기반으로 분석한 결과, 다음과 같은 주요 구현 과�
 ### 🔥 **1단계: 핵심 기능 구현 (필수)**
 
 #### 1.1 TestPg API 연동 구현
-- [ ] **TestPg API 문서 분석** ([참고자료](https://api-test-pg.bigs.im/docs/index.html))
-- [ ] **external/pg-client 모듈에 TestPg 어댑터 구현**
-- [ ] **PgClientOutPort 인터페이스 구현체 작성**
-- [ ] **REST API 호출 로직 구현**
+- [x] **TestPg API 문서 분석** ([참고자료](https://api-test-pg.bigs.im/docs/index.html))
+- [x] **external/pg-client 모듈에 TestPg 어댑터 구현**
+- [x] **PgClientOutPort 인터페이스 구현체 작성**
+- [x] **REST API 호출 로직 구현**
 - [ ] **에러 처리 및 재시도 로직 추가**
 
 #### 1.2 결제 생성 API 완성
-- [ ] **PaymentService 하드코드 수수료 계산 제거**
-- [ ] **제휴사별 수수료 정책 조회 로직 구현**
-- [ ] **FeeCalculator에 HALF_UP 반올림 적용**
-- [ ] **PaymentController POST /api/v1/payments 완성**
-- [ ] **결제 승인 → 수수료 계산 → 저장 플로우 검증**
+- [x] **PaymentService 하드코드 수수료 계산 제거**
+- [x] **제휴사별 수수료 정책 조회 로직 구현**
+- [x] **FeeCalculator에 HALF_UP 반올림 적용**
+- [x] **PaymentController POST /api/v1/payments 완성**
+- [x] **결제 승인 → 수수료 계산 → 저장 플로우 검증**
 
 #### 1.3 결제 내역 조회 API 구현
 - [ ] **QueryPaymentsService 구현 완성**

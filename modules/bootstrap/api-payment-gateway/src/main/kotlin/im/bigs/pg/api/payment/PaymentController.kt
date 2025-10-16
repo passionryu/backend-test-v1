@@ -51,6 +51,9 @@ class PaymentController(
                 amount = req.amount,
                 cardBin = req.cardBin,
                 cardLast4 = req.cardLast4,
+                birthDate = req.birthDate,
+                expiry = req.expiry,
+                password = req.password,
                 productName = req.productName,
             ),
         )
