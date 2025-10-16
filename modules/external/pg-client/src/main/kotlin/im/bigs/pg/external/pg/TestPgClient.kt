@@ -51,6 +51,7 @@ class TestPgClient(
         // 실제 PG 서버 호출
         val response = webClient.post()
             .uri("$baseUrl/api/v1/pay/credit-card")
+            .header("API-KEY", apiKey)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(mapOf("enc" to enc))
             .retrieve()
