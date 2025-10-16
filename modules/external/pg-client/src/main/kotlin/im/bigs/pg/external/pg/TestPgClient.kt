@@ -4,6 +4,8 @@ import im.bigs.pg.common.PgApproveRequest
 import im.bigs.pg.common.PgApproveResult
 import im.bigs.pg.common.PgClientOutPort
 import im.bigs.pg.domain.payment.PaymentStatus
+import im.bigs.pg.external.pg.config.PgClientProperties
+import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
@@ -14,8 +16,6 @@ import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import kotlinx.coroutines.reactor.awaitSingle
-
 
 /**
  * 실제 Test PG 서버 연동 구현체
@@ -24,13 +24,13 @@ import kotlinx.coroutines.reactor.awaitSingle
  */
 @Component
 class TestPgClient(
-    private val webClient: WebClient
+    private val webClient: WebClient,
+    private val properties: PgClientProperties
 ) : PgClientOutPort {
 
     private val baseUrl= "https://api-test-pg.bigs.im"
-    private val apiKey = "11111111-1111-4111-8111-111111111111"
-    private val ivBase64 = "AAAAAAAAAAAAAAAA"
-
+    private val apiKey = properties.apiKey
+    private val ivBase64 = properties.ivBase64
     /**
      * 해당 구현체 활성화
      * - Boolean = true : 활성화
