@@ -101,11 +101,6 @@ class TestPgClient(
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, spec)
         val cipherText = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
-
-        //return Base64.getEncoder().withoutPadding().encodeToString(cipherText)
-        // return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
-//        // ✅ 일반 Base64로 인코딩
-//        return Base64.getEncoder().encodeToString(cipherText)
     }
 
     data class PgApproveApiResponse(
