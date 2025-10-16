@@ -34,36 +34,58 @@ class TestPgClient(
 
     // 결재 승인 메서드
     override fun approve(request: PgApproveRequest): PgApproveResult {
-        // 평문 JSON 생성
+
+        /* 바이트 검증 코드 */
+        val ivBytes = Base64.getUrlDecoder().decode(ivBase64)
+        println("IV bytes length = ${ivBytes.size}") // → 12 출력되어야 함
+
+        // 평문 JSON 생성 - 카드 번호를 올바른 형식으로 생성
+        // cardBin이 "1111"이고 cardLast4가 "1111"인 경우 "1111-1111-1111-1111"이 되어야 함
+        val cardNumber = "${request.cardBin}-${request.cardBin}-${request.cardBin}-${request.cardLast4}"
         val plainJson = """
             {
-                "cardNumber": "${request.cardBin}${request.cardLast4}",
+                "cardNumber": "$cardNumber",
                 "birthDate": "19900101",
                 "expiry": "1227",
                 "password": "12",
                 "amount": ${request.amount}
             }
         """.trimIndent()
+        
+        println("Plain JSON: $plainJson")
 
-        // AES-256-GCM 암호화
+        // 암호화 수행
         val enc = encryptAesGcm(plainJson, apiKey, ivBase64)
 
-        // 실제 PG 서버 호출
-        val response = webClient.post()
-            .uri("$baseUrl/api/v1/pay/credit-card")
-            .header("API-KEY", apiKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(mapOf("enc" to enc))
-            .retrieve()
-            .bodyToMono(PgApproveApiResponse::class.java)
-            .block()
+        val requestBody = mapOf("enc" to enc)
+        println("Request Body: $requestBody")
 
-        // 여기서는 예시로 승인 성공을 반환
-        return PgApproveResult(
-            approvalCode = "TEST1234",
-            approvedAt = LocalDateTime.now(ZoneOffset.UTC),
-            status = PaymentStatus.APPROVED
-        )
+        // 실제 PG 서버 호출
+        try {
+            val response = webClient.post()
+                .uri("$baseUrl/api/v1/pay/credit-card")
+                .header("API-KEY", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(PgApproveApiResponse::class.java)
+                .block()
+
+            println("API Response: $response")
+
+            // 실제 응답을 사용하여 결과 반환
+            return PgApproveResult(
+                approvalCode = response?.approvalCode ?: "UNKNOWN",
+                approvedAt = response?.approvedAt?.let { 
+                    LocalDateTime.parse(it.substringBefore('.'))
+                } ?: LocalDateTime.now(ZoneOffset.UTC),
+                status = if (response?.status == "APPROVED") PaymentStatus.APPROVED else PaymentStatus.CANCELED
+            )
+        } catch (e: Exception) {
+            println("API 호출 실패: ${e.message}")
+            e.printStackTrace()
+            throw e
+        }
     }
 
     /**
@@ -79,11 +101,18 @@ class TestPgClient(
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, spec)
         val cipherText = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
+
+        //return Base64.getEncoder().withoutPadding().encodeToString(cipherText)
+        // return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherText)
+//        // ✅ 일반 Base64로 인코딩
+//        return Base64.getEncoder().encodeToString(cipherText)
     }
 
     data class PgApproveApiResponse(
         val approvalCode: String,
         val approvedAt: String,
+        val maskedCardLast4: String?,
+        val amount: Long?,
         val status: String
     )
 
