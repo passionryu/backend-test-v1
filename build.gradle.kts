@@ -78,6 +78,19 @@ project(":modules:application") {
     apply(plugin = "org.springframework.boot")
     apply(plugin = "io.spring.dependency-management")
     apply(plugin = "org.jetbrains.kotlin.plugin.spring")
+
+    dependencies {
+        // 코루틴 core 라이브러리 추가 → suspend/코루틴 테스트용
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+        // 기존 의존성
+        implementation(project(":modules:domain"))
+        implementation("org.springframework:spring-context")
+        implementation(project(":modules:external:pg-client"))
+        implementation(project(":modules:common"))
+    }
+
 }
 
 // domain
@@ -112,6 +125,8 @@ project(":modules:external") {
         dependencies {
             // WebClient
             implementation("org.springframework.boot:spring-boot-starter-webflux")
+            // Kolinx
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.3")
         }
     }
 }
