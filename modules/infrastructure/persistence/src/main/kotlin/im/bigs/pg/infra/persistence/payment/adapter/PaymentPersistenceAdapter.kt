@@ -12,6 +12,7 @@ import im.bigs.pg.infra.persistence.payment.repository.PaymentJpaRepository
 import java.time.ZoneOffset
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 /** PaymentOutPort 구현체(JPA 기반). */
 @Component
@@ -70,8 +71,10 @@ class PaymentPersistenceAdapter(
             cardBin = this.cardBin,
             cardLast4 = this.cardLast4,
             approvalCode = this.approvalCode,
-            approvedAt = this.approvedAt.toInstant(ZoneOffset.UTC),
+            approvedAt = this.approvedAt?.toInstant(ZoneOffset.UTC),
             status = this.status.name,
+            canceledReason = this.canceledReason,
+            failedAt = this.failedAt?.toInstant(ZoneOffset.UTC),
             createdAt = this.createdAt.toInstant(ZoneOffset.UTC),
             updatedAt = this.updatedAt.toInstant(ZoneOffset.UTC),
         )
@@ -88,8 +91,11 @@ class PaymentPersistenceAdapter(
             cardBin = this.cardBin,
             cardLast4 = this.cardLast4,
             approvalCode = this.approvalCode,
-            approvedAt = java.time.LocalDateTime.ofInstant(this.approvedAt, ZoneOffset.UTC),
+            // approvedAt = java.time.LocalDateTime.ofInstant(this.approvedAt, ZoneOffset.UTC),
+            approvedAt = this.approvedAt?.let { LocalDateTime.ofInstant(it, ZoneOffset.UTC) }, //안전한 null 처리 추가
             status = PaymentStatus.valueOf(this.status),
+            canceledReason = this.canceledReason,
+            failedAt = this.failedAt?.let { LocalDateTime.ofInstant(it, ZoneOffset.UTC) },
             createdAt = java.time.LocalDateTime.ofInstant(this.createdAt, ZoneOffset.UTC),
             updatedAt = java.time.LocalDateTime.ofInstant(this.updatedAt, ZoneOffset.UTC),
         )

@@ -14,10 +14,13 @@ data class PaymentResponse(
     val feeAmount: BigDecimal,
     val netAmount: BigDecimal,
     val cardLast4: String?,
-    val approvalCode: String,
+    val approvalCode: String?,
     @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val approvedAt: LocalDateTime,
+    val approvedAt: LocalDateTime?,
     val status: PaymentStatus,
+    val canceledReason: String?,   // 실패 원인
+    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    val failedAt: LocalDateTime?,  // 실패 시간
     @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val createdAt: LocalDateTime,
 ) {
@@ -33,6 +36,8 @@ data class PaymentResponse(
             approvalCode = p.approvalCode,
             approvedAt = p.approvedAt,
             status = p.status,
+            canceledReason = p.canceledReason,
+            failedAt = p.failedAt,
             createdAt = p.createdAt,
         )
     }
