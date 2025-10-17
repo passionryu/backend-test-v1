@@ -1,5 +1,6 @@
 package im.bigs.pg.application.payment.service
 
+import im.bigs.pg.application.payment.helper.PaymentCursorHelper
 import im.bigs.pg.application.payment.helper.PaymentQueryHelper
 import im.bigs.pg.application.payment.helper.PaymentStatusMapper
 import im.bigs.pg.application.payment.helper.PaymentSummaryHelper
@@ -7,11 +8,8 @@ import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
 import im.bigs.pg.application.payment.port.`in`.QueryResult
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
-import im.bigs.pg.application.payment.port.out.PaymentQuery
-import im.bigs.pg.application.payment.port.out.PaymentSummaryFilter
 import im.bigs.pg.domain.payment.PaymentSummary
 import org.springframework.stereotype.Service
-import java.time.ZoneOffset
 
 /**
  * 결제 이력 조회 유스케이스 구현체.
@@ -25,25 +23,23 @@ class QueryPaymentsService(
 ) : QueryPaymentsUseCase {
 
     /**
-     * 필터를 기반으로 결제 내역을 조회합니다.
+     * 결제 내역 조회를 순차적으로 수행합니다.
      *
-     * @param filter 파트너/상태/기간/커서/페이지 크기
-     * @return 조회 결과(목록/통계/커서)
+     * 1. 커서 디코딩 (cursorEncoder.decode)
+     * 2. 상태 변환 (String -> PaymentStatus) (PaymentStatusMapper.from)
+     * 3. 결제 목록 조회 - 커서 페이지네이션 (PaymentQueryHelper.fetchPayments)
+     * 4. 통계 조회 - 필터와 동일한 조건으로 조회 (PaymentSummaryHelper.fetchSummary)
+     * 5. 다음 커서 생성 (PaymentCursorHelper.buildNextCursor)
+     * 6. 조회 결과 반환 (QueryResult)
      */
     override fun query(filter: QueryFilter): QueryResult {
 
-        val cursorInfo = cursorEncoder.decode(filter.cursor) // 1. 커서 디코딩
-        val paymentStatus = PaymentStatusMapper.from(filter.status) // 2. 상태 변환 (String -> PaymentStatus)
-        val pageResult = PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo) // 3. 결제 목록 조회 (페이지네이션)
-        val summary = PaymentSummaryHelper.fetchSummary(repository = paymentRepository, partnerId = filter.partnerId,
-            status = paymentStatus, from = filter.from, to = filter.to) // 4. 통계 조회 (필터와 동일한 조건)
+        val cursorInfo = cursorEncoder.decode(filter.cursor)
+        val paymentStatus = PaymentStatusMapper.from(filter.status)
+        val pageResult = PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo)
+        val summary = PaymentSummaryHelper.fetchSummary(repository = paymentRepository, partnerId = filter.partnerId, status = paymentStatus, from = filter.from, to = filter.to)
+        val nextCursor = PaymentCursorHelper.buildNextCursor(pageResult, cursorEncoder)
 
-        // 커서 생성
-        val nextCursor = if (pageResult.hasNext && pageResult.nextCursorCreatedAt != null && pageResult.nextCursorId != null) {
-            cursorEncoder.encode(pageResult.nextCursorCreatedAt.toInstant(ZoneOffset.UTC), pageResult.nextCursorId)
-        } else null
-
-        // 6. 결과 반환
         return QueryResult(
             items = pageResult.items,
             summary = PaymentSummary(
