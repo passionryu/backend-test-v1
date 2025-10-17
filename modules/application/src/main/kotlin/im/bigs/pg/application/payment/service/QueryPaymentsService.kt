@@ -1,5 +1,6 @@
 package im.bigs.pg.application.payment.service
 
+import im.bigs.pg.application.payment.helper.PaymentStatusMapper
 import im.bigs.pg.application.payment.port.`in`.*
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.payment.port.out.PaymentQuery
@@ -12,6 +13,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Base64
 
+
 /**
  * 결제 이력 조회 유스케이스 구현체.
  * - 커서 토큰은 createdAt/id를 안전하게 인코딩해 전달/복원합니다.
@@ -20,6 +22,8 @@ import java.util.Base64
 @Service
 class QueryPaymentsService(
     private val paymentRepository: PaymentOutPort,
+    private val paymentSummaryService: PaymentSummaryService,
+    private val cursorEncoder: CursorEncoder
 ) : QueryPaymentsUseCase {
 
     /**
@@ -33,8 +37,7 @@ class QueryPaymentsService(
         val cursorInfo = decodeCursor(filter.cursor)
 
         // 2. 상태 변환 (String -> PaymentStatus)
-        val paymentStatus = filter.status?.let { try { PaymentStatus.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { null }
-        }
+        val paymentStatus = PaymentStatusMapper.from(filter.status)
 
         // 3. 결제 목록 조회 (페이지네이션)
         val pageQuery = PaymentQuery(
