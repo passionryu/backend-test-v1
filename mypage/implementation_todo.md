@@ -20,7 +20,7 @@ README.md를 기반으로 분석한 결과, 다음과 같은 주요 구현 과�
 - [x] **external/pg-client 모듈에 TestPg 어댑터 구현**
 - [x] **PgClientOutPort 인터페이스 구현체 작성**
 - [x] **REST API 호출 로직 구현**
-- [ ] **에러 처리 및 재시도 로직 추가**
+- [x] **에러 처리 및 재시도 로직 추가**
 
 #### 1.2 결제 생성 API 완성
 - [x] **PaymentService 하드코드 수수료 계산 제거**
@@ -30,22 +30,22 @@ README.md를 기반으로 분석한 결과, 다음과 같은 주요 구현 과�
 - [x] **결제 승인 → 수수료 계산 → 저장 플로우 검증**
 
 #### 1.3 결제 내역 조회 API 구현
-- [ ] **QueryPaymentsService 구현 완성**
-- [ ] **PaymentController GET /api/v1/payments 완성**
-- [ ] **쿼리 파라미터 처리 (partnerId, status, from, to, cursor, limit)**
-- [ ] **응답 DTO 설계 (items, summary, nextCursor, hasNext)**
+- [x] **QueryPaymentsService 구현 완성**
+- [x] **PaymentController GET /api/v1/payments 완성**
+- [x] **쿼리 파라미터 처리 (partnerId, status, from, to, cursor, limit)**
+- [x] **응답 DTO 설계 (items, summary, nextCursor, hasNext)**
 
 #### 1.4 커서 기반 페이지네이션 구현
-- [ ] **Cursor 클래스 설계 및 구현**
-- [ ] **정렬 키 기반 페이지네이션 (createdAt desc, id desc)**
-- [ ] **다음 페이지 존재 여부 판단 로직**
-- [ ] **커서 인코딩/디코딩 로직**
+- [x] **Cursor 클래스 설계 및 구현**
+- [x] **정렬 키 기반 페이지네이션 (createdAt desc, id desc)**
+- [x] **다음 페이지 존재 여부 판단 로직**
+- [x] **커서 인코딩/디코딩 로직**
 
 #### 1.5 통계 기능 구현
-- [ ] **PaymentSummaryFilter 구현**
-- [ ] **PaymentSummaryProjection 구현**
-- [ ] **필터와 동일한 집합 대상 통계 계산**
-- [ ] **count, totalAmount, totalNetAmount 집계**
+- [x] **PaymentSummaryFilter 구현**
+- [x] **PaymentSummaryProjection 구현**
+- [x] **필터와 동일한 집합 대상 통계 계산**
+- [x] **count, totalAmount, totalNetAmount 집계**
 
 ---
 
