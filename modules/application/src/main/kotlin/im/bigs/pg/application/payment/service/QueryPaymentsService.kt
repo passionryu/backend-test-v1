@@ -1,18 +1,18 @@
 package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.payment.helper.PaymentStatusMapper
-import im.bigs.pg.application.payment.port.`in`.*
+import im.bigs.pg.application.payment.port.`in`.QueryFilter
+import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
+import im.bigs.pg.application.payment.port.`in`.QueryResult
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.payment.port.out.PaymentQuery
 import im.bigs.pg.application.payment.port.out.PaymentSummaryFilter
-import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.domain.payment.PaymentSummary
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.Base64
-
+import java.util.*
 
 /**
  * 결제 이력 조회 유스케이스 구현체.
@@ -33,11 +33,9 @@ class QueryPaymentsService(
      * @return 조회 결과(목록/통계/커서)
      */
     override fun query(filter: QueryFilter): QueryResult {
-        // 1. 커서 디코딩
-        val cursorInfo = decodeCursor(filter.cursor)
 
-        // 2. 상태 변환 (String -> PaymentStatus)
-        val paymentStatus = PaymentStatusMapper.from(filter.status)
+        val cursorInfo = cursorEncoder.decode(filter.cursor) // 1. 커서 디코딩
+        val paymentStatus = PaymentStatusMapper.from(filter.status) // 2. 상태 변환 (String -> PaymentStatus)
 
         // 3. 결제 목록 조회 (페이지네이션)
         val pageQuery = PaymentQuery(
@@ -60,12 +58,9 @@ class QueryPaymentsService(
         )
         val summaryProjection = paymentRepository.summary(summaryFilter)
 
-        // 5. 다음 커서 생성
+        // 커서 생성
         val nextCursor = if (pageResult.hasNext && pageResult.nextCursorCreatedAt != null && pageResult.nextCursorId != null) {
-            encodeCursor(
-                pageResult.nextCursorCreatedAt.toInstant(ZoneOffset.UTC),
-                pageResult.nextCursorId
-            )
+            cursorEncoder.encode(pageResult.nextCursorCreatedAt.toInstant(ZoneOffset.UTC), pageResult.nextCursorId)
         } else null
 
         // 6. 결과 반환
@@ -81,25 +76,4 @@ class QueryPaymentsService(
         )
     }
 
-    /** 다음 페이지 이동을 위한 커서 인코딩. */
-    private fun encodeCursor(createdAt: Instant?, id: Long?): String? {
-        if (createdAt == null || id == null) return null
-        val raw = "${createdAt.toEpochMilli()}:$id"
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.toByteArray())
-    }
-
-    /** 요청으로 전달된 커서 복원. 유효하지 않으면 null 커서로 간주합니다. */
-    private fun decodeCursor(cursor: String?): Pair<LocalDateTime?, Long?>? {
-        if (cursor.isNullOrBlank()) return null
-        return try {
-            val raw = String(Base64.getUrlDecoder().decode(cursor))
-            val parts = raw.split(":")
-            val ts = parts[0].toLong()
-            val id = parts[1].toLong()
-            val instant = Instant.ofEpochMilli(ts)
-            LocalDateTime.ofInstant(instant, ZoneOffset.UTC) to id
-        } catch (e: Exception) {
-            null
-        }
-    }
 }
