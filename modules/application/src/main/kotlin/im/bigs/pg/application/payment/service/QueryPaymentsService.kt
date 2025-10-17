@@ -2,6 +2,7 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.payment.helper.PaymentQueryHelper
 import im.bigs.pg.application.payment.helper.PaymentStatusMapper
+import im.bigs.pg.application.payment.helper.PaymentSummaryHelper
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
 import im.bigs.pg.application.payment.port.`in`.QueryResult
@@ -34,15 +35,8 @@ class QueryPaymentsService(
         val cursorInfo = cursorEncoder.decode(filter.cursor) // 1. 커서 디코딩
         val paymentStatus = PaymentStatusMapper.from(filter.status) // 2. 상태 변환 (String -> PaymentStatus)
         val pageResult = PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo) // 3. 결제 목록 조회 (페이지네이션)
-
-        // 4. 통계 조회 (필터와 동일한 조건)
-        val summaryFilter = PaymentSummaryFilter(
-            partnerId = filter.partnerId,
-            status = paymentStatus,
-            from = filter.from,
-            to = filter.to,
-        )
-        val summaryProjection = paymentRepository.summary(summaryFilter)
+        val summary = PaymentSummaryHelper.fetchSummary(repository = paymentRepository, partnerId = filter.partnerId,
+            status = paymentStatus, from = filter.from, to = filter.to) // 4. 통계 조회 (필터와 동일한 조건)
 
         // 커서 생성
         val nextCursor = if (pageResult.hasNext && pageResult.nextCursorCreatedAt != null && pageResult.nextCursorId != null) {
@@ -53,9 +47,9 @@ class QueryPaymentsService(
         return QueryResult(
             items = pageResult.items,
             summary = PaymentSummary(
-                count = summaryProjection.count,
-                totalAmount = summaryProjection.totalAmount,
-                totalNetAmount = summaryProjection.totalNetAmount,
+                count = summary.count,
+                totalAmount = summary.totalAmount,
+                totalNetAmount = summary.totalNetAmount,
             ),
             nextCursor = nextCursor,
             hasNext = pageResult.hasNext,
