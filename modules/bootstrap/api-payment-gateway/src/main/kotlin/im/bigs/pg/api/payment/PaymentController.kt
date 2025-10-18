@@ -7,6 +7,7 @@ import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
 import im.bigs.pg.api.payment.dto.QueryResponse
 import im.bigs.pg.api.payment.dto.Summary
+import io.swagger.v3.oas.annotations.Operation
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -39,6 +40,7 @@ class PaymentController(
      * @param req 결제 요청 본문
      * @return 생성된 결제 요약 응답
      */
+    @Operation(summary = "결제 생성 API", description = "새로운 결제를 등록합니다.")
     @PostMapping
     suspend fun create(@RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
         val saved = paymentUseCase.pay(
@@ -69,6 +71,7 @@ class PaymentController(
      * @param limit 페이지 크기(기본 20)
      * @return 목록/통계/커서 정보
      */
+    @Operation(summary = "결제 조회 API", description = "조건에 따라 결제 내역을 조회합니다.")
     @GetMapping
     fun query(
         @RequestParam(required = false) partnerId: Long?,
