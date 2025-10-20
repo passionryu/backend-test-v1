@@ -255,5 +255,34 @@ class PaymentServiceTest {
         verify(exactly = 0) { paymentRepository.save(any()) }
     }
 
+    @Test
+    @DisplayName("비활성화된 파트너로 결제 요청 시 예외가 발생해야 한다")
+    fun `비활성화된 파트너로 결제 요청 시 예외가 발생해야 한다`() = runBlocking {
+        // Given
+        val inactivePartnerId = 2L
+        val command = PaymentCommand(
+            partnerId = inactivePartnerId,
+            amount = BigDecimal("1000"),
+            cardBin = "123456",
+            cardLast4 = "7890",
+            birthDate = "19900101",
+            expiry = "1227",
+            password = "12",
+            productName = "테스트 상품"
+        )
+
+        // When & Then
+        every { partnerManager.findPartner(inactivePartnerId) } throws IllegalStateException("Partner is inactive: $inactivePartnerId")
+
+        assertFailsWith<IllegalStateException> {
+            paymentService.pay(command)
+        }
+
+        verify { partnerManager.findPartner(inactivePartnerId) }
+        verify(exactly = 0) { pgClientManager.findPgClient(any()) }
+        coVerify(exactly = 0) { paymentAuthorizationManager.authorizePayment(any(), any(), any()) }
+        verify(exactly = 0) { feePolicyManager.findFeePolicy(any()) }
+        verify(exactly = 0) { paymentRepository.save(any()) }
+    }
 
 }
