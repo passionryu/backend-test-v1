@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- V1: partner table -->
+    <changeSet id="1-create-partner" author="you">
+        <createTable tableName="partner">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- V2: partner_fee_policy -->
+    <changeSet id="2-create-partner-fee-policy" author="you">
+        <createTable tableName="partner_fee_policy">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="partner_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effective_from" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="percentage" type="NUMERIC(10,6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fixed_fee" type="NUMERIC(15,0)"/>
+        </createTable>
+
+        <!-- index on (partner_id, effective_from desc) -->
+        <createIndex indexName="idx_fee_partner_from" tableName="partner_fee_policy">
+            <column name="partner_id"/>
+            <column name="effective_from"/>
+        </createIndex>
+
+        <!-- foreign key -->
+        <addForeignKeyConstraint baseTableName="partner_fee_policy"
+                                 baseColumnNames="partner_id"
+                                 referencedTableName="partner"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_partner_fee_policy_partner"/>
+    </changeSet>
+
+    <!-- V3: payment -->
+    <changeSet id="3-create-payment" author="you">
+        <createTable tableName="payment">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="partner_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="NUMERIC(15,0)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="applied_fee_rate" type="NUMERIC(10,6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fee_amount" type="NUMERIC(15,0)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="net_amount" type="NUMERIC(15,0)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="card_bin" type="VARCHAR(8)"/>
+            <column name="card_last4" type="VARCHAR(4)"/>
+            <column name="approval_code" type="VARCHAR(32)"/>
+            <column name="approved_at" type="TIMESTAMP"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="canceled_reason" type="VARCHAR(255)"/>
+            <column name="failed_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- indexes -->
+        <createIndex indexName="idx_payment_created" tableName="payment">
+            <column name="created_at"/>
+            <column name="id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_payment_partner_created" tableName="payment">
+            <column name="partner_id"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <!-- fk -->
+        <addForeignKeyConstraint baseTableName="payment"
+                                 baseColumnNames="partner_id"
+                                 referencedTableName="partner"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_payment_partner"/>
+    </changeSet>
+</databaseChangeLog>
