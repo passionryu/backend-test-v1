@@ -133,5 +133,96 @@ class PaymentServiceTest {
         verify { paymentRepository.save(expectedPayment) }
     }
 
+    @Test
+    @DisplayName("결제 실패 시 취소된 결제가 저장되어야 한다")
+    fun `결제 실패 시 취소된 결제가 저장되어야 한다`() = runBlocking {
+        // Given
+        val partnerId = 1L
+        val amount = BigDecimal("5000")
+        val command = PaymentCommand(
+            partnerId = partnerId,
+            amount = amount,
+            cardBin = "111111",
+            cardLast4 = "2222",
+            birthDate = "19950101",
+            expiry = "1228",
+            password = "34",
+            productName = "실패 상품"
+        )
+
+        val partner = Partner(
+            id = partnerId,
+            code = "FAIL_PARTNER",
+            name = "실패 파트너",
+            active = true
+        )
+
+        val pgClient = mockk<PgClientOutPort>()
+
+        val failedApproveResult = PgApproveResult(
+            approvalCode = null,
+            approvedAt = null,
+            status = PaymentStatus.CANCELED,
+            failureReason = "잔액 부족"
+        )
+
+        val feePolicy = FeePolicy(
+            id = 2L,
+            partnerId = partnerId,
+            effectiveFrom = LocalDateTime.ofInstant(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
+            percentage = BigDecimal("0.0300"), // 3.0%
+            fixedFee = null // 정액 수수료 없음
+        )
+
+        // 실제 FeeCalculator를 사용하여 계산값 확인
+        val (calculatedFee, calculatedNet) = FeeCalculator.calculateFee(amount, feePolicy.percentage, feePolicy.fixedFee)
+        // 5000 * 0.0300 = 150
+        // 5000 - 150 = 4850
+
+        val expectedPayment = Payment(
+            id = null,
+            partnerId = partnerId,
+            amount = amount,
+            appliedFeeRate = feePolicy.percentage,
+            feeAmount = calculatedFee,
+            netAmount = calculatedNet,
+            cardBin = command.cardBin,
+            cardLast4 = command.cardLast4,
+            status = PaymentStatus.CANCELED,
+            canceledReason = failedApproveResult.failureReason,
+            failedAt = LocalDateTime.now(ZoneOffset.UTC)
+        )
+
+        val savedPayment = expectedPayment.copy(id = 100L)
+
+        // When & Then
+        every { partnerManager.findPartner(partnerId) } returns partner
+        every { pgClientManager.findPgClient(partnerId) } returns pgClient
+        coEvery {
+            paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command)
+        } returns failedApproveResult
+        every { feePolicyManager.findFeePolicy(partnerId) } returns feePolicy
+        every {
+            paymentBuilder.buildPayment(partnerId, command, failedApproveResult, feePolicy, calculatedFee, calculatedNet)
+        } returns expectedPayment
+        every { paymentRepository.save(expectedPayment) } returns savedPayment
+
+        val result = paymentService.pay(command)
+
+        // Then
+        assertEquals(savedPayment.id, result.id)
+        assertEquals(amount, result.amount)
+        assertEquals(calculatedFee, result.feeAmount)
+        assertEquals(calculatedNet, result.netAmount)
+        assertEquals(PaymentStatus.CANCELED, result.status)
+        assertEquals(failedApproveResult.failureReason, result.canceledReason)
+        assertEquals(null, result.approvalCode)
+
+        verify { partnerManager.findPartner(partnerId) }
+        verify { pgClientManager.findPgClient(partnerId) }
+        coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
+        verify { feePolicyManager.findFeePolicy(partnerId) }
+        verify { paymentRepository.save(expectedPayment) }
+    }
 
 }
