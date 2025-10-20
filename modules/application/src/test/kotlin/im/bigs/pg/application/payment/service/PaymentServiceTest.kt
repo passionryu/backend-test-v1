@@ -225,4 +225,35 @@ class PaymentServiceTest {
         verify { paymentRepository.save(expectedPayment) }
     }
 
+    @Test
+    @DisplayName("잘못된 파트너 ID로 결제 요청 시 예외가 발생해야 한다")
+    fun `잘못된 파트너 ID로 결제 요청 시 예외가 발생해야 한다`() = runBlocking {
+        // Given
+        val invalidPartnerId = 999L
+        val command = PaymentCommand(
+            partnerId = invalidPartnerId,
+            amount = BigDecimal("1000"),
+            cardBin = "123456",
+            cardLast4 = "7890",
+            birthDate = "19900101",
+            expiry = "1227",
+            password = "12",
+            productName = "테스트 상품"
+        )
+
+        // When & Then
+        every { partnerManager.findPartner(invalidPartnerId) } throws IllegalArgumentException("Partner not found: $invalidPartnerId")
+
+        assertFailsWith<IllegalArgumentException> {
+            paymentService.pay(command)
+        }
+
+        verify { partnerManager.findPartner(invalidPartnerId) }
+        verify(exactly = 0) { pgClientManager.findPgClient(any()) }
+        coVerify(exactly = 0) { paymentAuthorizationManager.authorizePayment(any(), any(), any()) }
+        verify(exactly = 0) { feePolicyManager.findFeePolicy(any()) }
+        verify(exactly = 0) { paymentRepository.save(any()) }
+    }
+
+
 }
