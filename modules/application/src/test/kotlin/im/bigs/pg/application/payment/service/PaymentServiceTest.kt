@@ -1,78 +1,214 @@
 package im.bigs.pg.application.payment.service
 
-import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
-import im.bigs.pg.application.partner.port.out.PartnerOutPort
+import im.bigs.pg.application.partner.manager.FeePolicyManager
+import im.bigs.pg.application.partner.manager.PartnerManager
+import im.bigs.pg.application.payment.manager.PaymentAuthorizationManager
+import im.bigs.pg.application.payment.manager.PaymentBuilder
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
-import im.bigs.pg.common.PgApproveRequest
+import im.bigs.pg.application.pg.manager.PgClientManager
 import im.bigs.pg.common.PgApproveResult
 import im.bigs.pg.common.PgClientOutPort
+import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.partner.FeePolicy
 import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
-import kotlinx.coroutines.runBlocking
+import io.mockk.*
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
-class 결제서비스Test {
-    private val partnerRepo = mockk<PartnerOutPort>()
-    private val feeRepo = mockk<FeePolicyOutPort>()
-    private val paymentRepo = mockk<PaymentOutPort>()
-    private val pgClient = object : PgClientOutPort {
-        override fun supports(partnerId: Long) = true
-        override suspend fun approve(request: PgApproveRequest) =
-            PgApproveResult("APPROVAL-123", LocalDateTime.of(2024, 1, 1, 0, 0), PaymentStatus.APPROVED)
+class PaymentServiceTest {
+
+    private val partnerManager = mockk<PartnerManager>()
+    private val pgClientManager = mockk<PgClientManager>()
+    private val paymentAuthorizationManager = mockk<PaymentAuthorizationManager>()
+    private val feePolicyManager = mockk<FeePolicyManager>()
+    private val paymentBuilder = mockk<PaymentBuilder>()
+    private val paymentRepository = mockk<PaymentOutPort>()
+
+    private val paymentService = PaymentService(
+        partnerManager = partnerManager,
+        pgClientManager = pgClientManager,
+        paymentAuthorizationManager = paymentAuthorizationManager,
+        feePolicyManager = feePolicyManager,
+        paymentBuilder = paymentBuilder,
+        paymentRepository = paymentRepository
+    )
+
+    @Test
+    @DisplayName("결제 성공 시 모든 단계가 올바르게 실행되어야 한다")
+    fun `결제 성공 시 모든 단계가 올바르게 실행되어야 한다`() = runTest {
+        // Given
+        val partnerId = 1L
+        val amount = BigDecimal("10000")
+        val command = PaymentCommand(
+            partnerId = partnerId,
+            amount = amount,
+            cardBin = "123456",
+            cardLast4 = "7890",
+            birthDate = "19900101",
+            expiry = "1227",
+            password = "12",
+            productName = "테스트 상품"
+        )
+
+        val partner = Partner(id = partnerId, code = "TEST_PARTNER", name = "테스트 파트너", active = true)
+        val pgClient = mockk<PgClientOutPort>()
+        val approveResult = PgApproveResult(
+            approvalCode = "APPROVAL-123",
+            approvedAt = LocalDateTime.now(ZoneOffset.UTC),
+            status = PaymentStatus.APPROVED
+        )
+
+        val feePolicy = FeePolicy(
+            id = 1L,
+            partnerId = partnerId,
+            effectiveFrom = LocalDateTime.ofInstant(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
+            percentage = BigDecimal("0.0235"),
+            fixedFee = BigDecimal("100")
+        )
+
+        val (calculatedFee, calculatedNet) = FeeCalculator.calculateFee(amount, feePolicy.percentage, feePolicy.fixedFee)
+        val expectedPayment = Payment(
+            id = 1L,
+            partnerId = partnerId,
+            amount = amount,
+            appliedFeeRate = feePolicy.percentage,
+            feeAmount = calculatedFee,
+            netAmount = calculatedNet,
+            cardBin = command.cardBin,
+            cardLast4 = command.cardLast4,
+            approvalCode = approveResult.approvalCode,
+            approvedAt = approveResult.approvedAt,
+            status = PaymentStatus.APPROVED
+        )
+
+        val savedPayment = expectedPayment.copy(id = 99L)
+
+        // Mock behavior
+        every { partnerManager.findPartner(partnerId) } returns partner
+        every { pgClientManager.findPgClient(partnerId) } returns pgClient
+        coEvery { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) } returns approveResult
+        every { feePolicyManager.findFeePolicy(partnerId) } returns feePolicy
+        every { paymentBuilder.buildPayment(partnerId, command, approveResult, feePolicy, calculatedFee, calculatedNet) } returns expectedPayment
+        every { paymentRepository.save(expectedPayment) } returns savedPayment
+
+        // When
+        val result = paymentService.pay(command)
+
+        // Then
+        assertEquals(savedPayment.id, result.id)
+        assertEquals(amount, result.amount)
+        assertEquals(calculatedFee, result.feeAmount)
+        assertEquals(calculatedNet, result.netAmount)
+        assertEquals(PaymentStatus.APPROVED, result.status)
+        assertEquals(approveResult.approvalCode, result.approvalCode)
+
+        verify { partnerManager.findPartner(partnerId) }
+        verify { pgClientManager.findPgClient(partnerId) }
+        coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
+        verify { feePolicyManager.findFeePolicy(partnerId) }
+        verify { paymentRepository.save(expectedPayment) }
     }
 
     @Test
-    @DisplayName("결제 시 수수료 정책을 적용하고 저장해야 한다")
-    fun `결제 시 수수료 정책을 적용하고 저장해야 한다`() = runBlocking {
-        val service = PaymentService(partnerRepo, feeRepo, paymentRepo, listOf(pgClient))
-        every { partnerRepo.findById(1L) } returns Partner(1L, "TEST", "Test", true)
-        every { feeRepo.findEffectivePolicy(1L, any()) } returns FeePolicy(
-            id = 10L, partnerId = 1L,
-            effectiveFrom = LocalDateTime.ofInstant(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
-            percentage = BigDecimal("0.0300"), fixedFee = BigDecimal("100")
+    @DisplayName("결제 실패 시 취소된 결제가 저장되어야 한다")
+    fun `결제 실패 시 취소된 결제가 저장되어야 한다`() = runTest {
+        val partnerId = 1L
+        val amount = BigDecimal("5000")
+        val command = PaymentCommand(partnerId = partnerId, amount = amount, cardBin = "111111", cardLast4 = "2222",
+            birthDate = "19950101", expiry = "1228", password = "34", productName = "실패 상품")
+
+        val partner = Partner(id = partnerId, code = "FAIL_PARTNER", name = "실패 파트너", active = true)
+        val pgClient = mockk<PgClientOutPort>()
+        val failedApproveResult = PgApproveResult(
+            approvalCode = null,
+            approvedAt = null,
+            status = PaymentStatus.CANCELED,
+            failureReason = "잔액 부족"
         )
-        val savedSlot = slot<Payment>()
-        every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 99L) }
 
-        val cmd = PaymentCommand(partnerId = 1L, amount = BigDecimal("10000"), cardBin = "1111" ,cardLast4 = "4242", birthDate = "19900101" , expiry = "1227", password = "12")
-        val res = service.pay(cmd) // suspend 함수 호출 가능
+        val feePolicy = FeePolicy(id = 2L, partnerId = partnerId, effectiveFrom = LocalDateTime.ofInstant(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
+            percentage = BigDecimal("0.0300"), fixedFee = null)
 
-        assertEquals(99L, res.id)
-        assertEquals(BigDecimal("400"), res.feeAmount)
-        assertEquals(BigDecimal("9600"), res.netAmount)
-        assertEquals(PaymentStatus.APPROVED, res.status)
+        val (calculatedFee, calculatedNet) = FeeCalculator.calculateFee(amount, feePolicy.percentage, feePolicy.fixedFee)
+        val expectedPayment = Payment(
+            id = null,
+            partnerId = partnerId,
+            amount = amount,
+            appliedFeeRate = feePolicy.percentage,
+            feeAmount = calculatedFee,
+            netAmount = calculatedNet,
+            cardBin = command.cardBin,
+            cardLast4 = command.cardLast4,
+            status = PaymentStatus.CANCELED,
+            canceledReason = failedApproveResult.failureReason,
+            failedAt = LocalDateTime.now(ZoneOffset.UTC)
+        )
+
+        val savedPayment = expectedPayment.copy(id = 100L)
+
+        every { partnerManager.findPartner(partnerId) } returns partner
+        every { pgClientManager.findPgClient(partnerId) } returns pgClient
+        coEvery { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) } returns failedApproveResult
+        every { feePolicyManager.findFeePolicy(partnerId) } returns feePolicy
+        every { paymentBuilder.buildPayment(partnerId, command, failedApproveResult, feePolicy, calculatedFee, calculatedNet) } returns expectedPayment
+        every { paymentRepository.save(expectedPayment) } returns savedPayment
+
+        val result = paymentService.pay(command)
+
+        assertEquals(savedPayment.id, result.id)
+        assertEquals(amount, result.amount)
+        assertEquals(calculatedFee, result.feeAmount)
+        assertEquals(calculatedNet, result.netAmount)
+        assertEquals(PaymentStatus.CANCELED, result.status)
+        assertEquals(failedApproveResult.failureReason, result.canceledReason)
+        assertEquals(null, result.approvalCode)
+
+        verify { partnerManager.findPartner(partnerId) }
+        verify { pgClientManager.findPgClient(partnerId) }
+        coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
+        verify { feePolicyManager.findFeePolicy(partnerId) }
+        verify { paymentRepository.save(expectedPayment) }
     }
-//
-//    @Test
-//    @DisplayName("결제 시 수수료 정책을 적용하고 저장해야 한다")
-//    fun `결제 시 수수료 정책을 적용하고 저장해야 한다`() {
-//        val service = PaymentService(partnerRepo, feeRepo, paymentRepo, listOf(pgClient))
-//        every { partnerRepo.findById(1L) } returns Partner(1L, "TEST", "Test", true)
-//        every { feeRepo.findEffectivePolicy(1L, any()) } returns FeePolicy(
-//            id = 10L, partnerId = 1L, effectiveFrom = LocalDateTime.ofInstant(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
-//            percentage = BigDecimal("0.0300"), fixedFee = BigDecimal("100")
-//        )
-//        val savedSlot = slot<Payment>()
-//        every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 99L) }
-//
-//        val cmd = PaymentCommand(partnerId = 1L, amount = BigDecimal("10000"), cardLast4 = "4242")
-//        val res = service.pay(cmd)
-//
-//        assertEquals(99L, res.id)
-//        assertEquals(BigDecimal("400"), res.feeAmount)
-//        assertEquals(BigDecimal("9600"), res.netAmount)
-//        assertEquals(PaymentStatus.APPROVED, res.status)
-//    }
+
+    @Test
+    @DisplayName("잘못된 파트너 ID로 결제 요청 시 예외가 발생해야 한다")
+    fun `잘못된 파트너 ID로 결제 요청 시 예외가 발생해야 한다`() = runTest {
+        val invalidPartnerId = 999L
+        val command = PaymentCommand(partnerId = invalidPartnerId, amount = BigDecimal("1000"),
+            cardBin = "123456", cardLast4 = "7890", birthDate = "19900101", expiry = "1227", password = "12", productName = "테스트 상품")
+
+        every { partnerManager.findPartner(invalidPartnerId) } throws IllegalArgumentException("Partner not found: $invalidPartnerId")
+
+        assertFailsWith<IllegalArgumentException> {
+            paymentService.pay(command)
+        }
+
+        verify { partnerManager.findPartner(invalidPartnerId) }
+    }
+
+    @Test
+    @DisplayName("비활성화된 파트너로 결제 요청 시 예외가 발생해야 한다")
+    fun `비활성화된 파트너로 결제 요청 시 예외가 발생해야 한다`() = runTest {
+        val inactivePartnerId = 2L
+        val command = PaymentCommand(partnerId = inactivePartnerId, amount = BigDecimal("1000"),
+            cardBin = "123456", cardLast4 = "7890", birthDate = "19900101", expiry = "1227", password = "12", productName = "테스트 상품")
+
+        every { partnerManager.findPartner(inactivePartnerId) } throws IllegalStateException("Partner is inactive: $inactivePartnerId")
+
+        assertFailsWith<IllegalStateException> {
+            paymentService.pay(command)
+        }
+
+        verify { partnerManager.findPartner(inactivePartnerId) }
+    }
 }
