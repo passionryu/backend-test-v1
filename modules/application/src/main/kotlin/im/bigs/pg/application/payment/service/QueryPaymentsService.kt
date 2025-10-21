@@ -48,7 +48,7 @@ class QueryPaymentsService(
         val endTime = System.currentTimeMillis()
         val executionTime = endTime - startTime
 
-        logger.info("✅ [CACHE] 결제 조회 완료 - 실행시간: ${executionTime}ms, 조회건수: ${pageResult.items.size}, hasNext: ${pageResult.hasNext}")
+        logger.info("[CACHE] 결제 조회 완료 - 실행시간: ${executionTime}ms, 조회건수: ${pageResult.items.size}, hasNext: ${pageResult.hasNext}")
 
         return QueryResult(
             items = pageResult.items,
@@ -75,7 +75,7 @@ class QueryPaymentsService(
         val result = PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo)
         val endTime = System.currentTimeMillis()
 
-        logger.info(" [CACHE] 결제 목록 조회 완료 - 실행시간: ${endTime - startTime}ms, 결과건수: ${result.items.size}")
+        logger.info("[CACHE] 결제 목록 조회 완료 - 실행시간: ${endTime - startTime}ms, 결과건수: ${result.items.size}")
         return result
     }
 
@@ -93,7 +93,7 @@ class QueryPaymentsService(
         val result = PaymentSummaryHelper.fetchSummary(paymentRepository, partnerId, status, from, to)
         val endTime = System.currentTimeMillis()
 
-        logger.info("📈 [CACHE] 결제 통계 조회 완료 - 실행시간: ${endTime - startTime}ms, count: ${result.count}, totalAmount: ${result.totalAmount}")
+        logger.info("[CACHE] 결제 통계 조회 완료 - 실행시간: ${endTime - startTime}ms, count: ${result.count}, totalAmount: ${result.totalAmount}")
         return result
     }
 

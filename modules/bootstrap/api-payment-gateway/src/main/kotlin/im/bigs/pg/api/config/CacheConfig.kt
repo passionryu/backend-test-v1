@@ -30,7 +30,7 @@ class CacheConfig {
      */
     @Bean
     fun redisTemplate(connectionFactory: RedisConnectionFactory): RedisTemplate<String, Any> {
-        logger.info("🔧 [CACHE] Redis 템플릿 초기화 시작")
+        logger.info("[CACHE] Redis 템플릿 초기화 시작")
         
         val template = RedisTemplate<String, Any>()
         template.connectionFactory = connectionFactory
@@ -45,7 +45,7 @@ class CacheConfig {
         
         template.afterPropertiesSet()
         
-        logger.info("✅ [CACHE] Redis 템플릿 초기화 완료")
+        logger.info("[CACHE] Redis 템플릿 초기화 완료")
         return template
     }
 
@@ -55,7 +55,7 @@ class CacheConfig {
      */
     @Bean
     fun cacheManager(redisConnectionFactory: RedisConnectionFactory): CacheManager {
-        logger.info("🔧 [CACHE] Redis 캐시 매니저 초기화 시작")
+        logger.info("[CACHE] Redis 캐시 매니저 초기화 시작")
 
         val defaultConfig = org.springframework.data.redis.cache.RedisCacheConfiguration
             .defaultCacheConfig()
@@ -73,8 +73,6 @@ class CacheConfig {
             // 결제 통계 캐시 설정 (15분 TTL - 조회보다 조금 더 길게)
             .withCacheConfiguration("paymentSummaries", defaultConfig.entryTtl(java.time.Duration.ofMinutes(15)))
             .build()
-
-        logger.info("✅ [CACHE] Redis 캐시 매니저 초기화 완료 - paymentQueries: 10분 TTL, paymentSummaries: 15분 TTL")
         return cacheManager
     }
 }
