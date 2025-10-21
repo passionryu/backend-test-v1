@@ -2,6 +2,7 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.partner.manager.FeePolicyManager
 import im.bigs.pg.application.partner.manager.PartnerManager
+import im.bigs.pg.application.payment.manager.EnhancedPaymentCacheManager
 import im.bigs.pg.application.payment.manager.PaymentAuthorizationManager
 import im.bigs.pg.application.payment.manager.PaymentBuilder
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
@@ -18,6 +19,7 @@ import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.cache.CacheManager
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
@@ -33,6 +35,8 @@ class PaymentServiceTest {
     private val feePolicyManager = mockk<FeePolicyManager>()
     private val paymentBuilder = mockk<PaymentBuilder>()
     private val paymentRepository = mockk<PaymentOutPort>()
+    private val cacheManager = mockk<EnhancedPaymentCacheManager>()
+
 
     private val paymentService = PaymentService(
         partnerManager = partnerManager,
@@ -40,8 +44,15 @@ class PaymentServiceTest {
         paymentAuthorizationManager = paymentAuthorizationManager,
         feePolicyManager = feePolicyManager,
         paymentBuilder = paymentBuilder,
-        paymentRepository = paymentRepository
+        paymentRepository = paymentRepository,
+        cacheManager = cacheManager,
     )
+
+    init {
+        // 캐시 무효화 mock 설정
+        every { cacheManager.evictPartnerCache(any()) } just Runs
+    }
+
 
     @Test
     @DisplayName("결제 성공 시 모든 단계가 올바르게 실행되어야 한다")
@@ -117,6 +128,8 @@ class PaymentServiceTest {
         coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
         verify { feePolicyManager.findFeePolicy(partnerId) }
         verify { paymentRepository.save(expectedPayment) }
+        verify { cacheManager.evictPartnerCache(partnerId) }
+
     }
 
     @Test
@@ -178,6 +191,8 @@ class PaymentServiceTest {
         coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
         verify { feePolicyManager.findFeePolicy(partnerId) }
         verify { paymentRepository.save(expectedPayment) }
+        verify { cacheManager.evictPartnerCache(partnerId) }
+
     }
 
     @Test
