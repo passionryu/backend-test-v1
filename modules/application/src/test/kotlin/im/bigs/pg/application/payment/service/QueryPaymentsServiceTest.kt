@@ -366,4 +366,80 @@ class QueryPaymentsServiceTest {
         verify(exactly = 0) { cursorEncoder.encode(any<Instant>(), any<Long>()) }
     }
 
+
+
+
+
+
+
+
+
+
+    @Test
+    @DisplayName("파트너 ID가 null인 경우 전체 파트너 대상으로 조회해야 한다")
+    fun `파트너 ID가 null인 경우 전체 파트너 대상으로 조회해야 한다`() {
+        // Given
+        val filter = QueryFilter(
+            partnerId = null,
+            status = "APPROVED",
+            limit = 5
+        )
+
+        val crossPartnerPayments = listOf(
+            Payment(
+                id = 1L,
+                partnerId = 1L,
+                amount = BigDecimal("10000"),
+                appliedFeeRate = BigDecimal("0.0235"),
+                feeAmount = BigDecimal("235"),
+                netAmount = BigDecimal("9765"),
+                status = PaymentStatus.APPROVED
+            ),
+            Payment(
+                id = 2L,
+                partnerId = 2L,
+                amount = BigDecimal("15000"),
+                appliedFeeRate = BigDecimal("0.0235"),
+                feeAmount = BigDecimal("353"),
+                netAmount = BigDecimal("14647"),
+                status = PaymentStatus.APPROVED
+            )
+        )
+
+        val pageResult = PaymentPage(
+            items = crossPartnerPayments,
+            hasNext = false,
+            nextCursorCreatedAt = null,
+            nextCursorId = null
+        )
+
+        val summaryProjection = PaymentSummaryProjection(
+            count = 2L,
+            totalAmount = BigDecimal("25000"),
+            totalNetAmount = BigDecimal("24412")
+        )
+
+        // Mock 설정
+        every { cursorEncoder.decode(null) } returns null
+        every { paymentRepository.findBy(any<PaymentQuery>()) } returns pageResult
+        every { paymentRepository.summary(any<PaymentSummaryFilter>()) } returns summaryProjection
+
+        // When
+        val result = queryPaymentsService.query(filter)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(2, result.items.size)
+        assertEquals(2L, result.summary.count)
+
+        // 검증 - 파트너 ID가 null로 전달되어야 함
+        val querySlot = slot<PaymentQuery>()
+        verify { paymentRepository.findBy(capture(querySlot)) }
+        assertEquals(null, querySlot.captured.partnerId)
+
+        val summaryFilterSlot = slot<PaymentSummaryFilter>()
+        verify { paymentRepository.summary(capture(summaryFilterSlot)) }
+        assertEquals(null, summaryFilterSlot.captured.partnerId)
+    }
+
 }
