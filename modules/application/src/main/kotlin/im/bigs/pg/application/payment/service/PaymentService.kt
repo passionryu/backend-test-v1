@@ -10,6 +10,7 @@ import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.pg.manager.PgClientManager
 import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.payment.Payment
+import org.springframework.cache.CacheManager
 import org.springframework.stereotype.Service
 
 /**
@@ -25,10 +26,13 @@ class PaymentService(
     private val feePolicyManager: FeePolicyManager,
     private val paymentBuilder: PaymentBuilder,
     private val paymentRepository: PaymentOutPort,
+    private val cacheManager: CacheManager,
 ) : PaymentUseCase {
 
     /**
      * 결제 승인/수수료 계산/저장을 순차적으로 수행합니다.
+     * 
+     * Cache Eviction: 새 결제 생성 시 해당 제휴사의 캐시된 조회 결과를 무효화
      *
      * 1. Partner 조회 및 활성화 확인 (partnerManager.findPartner)
      * 2. 해당 Partner에 맞는 PG Client 조회 (pgClientManager.findPgClient)
@@ -36,6 +40,7 @@ class PaymentService(
      * 4. 수수료 정책 조회 및 수수료/정산금 계산 (feePolicyManager.findFeePolicy + FeeCalculator.calculateFee)
      * 5. 결제 객체 생성 (paymentBuilder.buildPayment)
      * 6. DB 저장 (paymentRepository.save)
+     * 7. 캐시 무효화 (해당 제휴사의 조회 결과 캐시 삭제)
      */
     override suspend fun pay(command: PaymentCommand): Payment {
 
@@ -45,6 +50,32 @@ class PaymentService(
         val feePolicy = feePolicyManager.findFeePolicy(partner.id)
         val (fee, net) = FeeCalculator.calculateFee(command.amount, feePolicy.percentage, feePolicy.fixedFee)
         val payment = paymentBuilder.buildPayment(partner.id, command, approve, feePolicy, fee, net)
-        return paymentRepository.save(payment)
+        val savedPayment = paymentRepository.save(payment)
+        
+        // 결제 생성 후 해당 제휴사의 캐시 무효화 (Cache-Aside 패턴)
+        evictPartnerCache(command.partnerId)
+        
+        return savedPayment
+    }
+    
+    /**
+     * 특정 제휴사의 결제 조회 캐시를 무효화합니다.
+     * 새 결제가 생성되면 해당 제휴사의 모든 조회 결과 캐시를 삭제하여 
+     * 데이터 일관성을 보장합니다.
+     */
+    private fun evictPartnerCache(partnerId: Long) {
+        try {
+            // 결제 조회 캐시 무효화
+            val queryCache = cacheManager.getCache("paymentQueries")
+            queryCache?.clear()
+            
+            // 결제 통계 캐시 무효화  
+            val summaryCache = cacheManager.getCache("paymentSummaries")
+            summaryCache?.clear()
+        } catch (e: Exception) {
+            // 캐시 무효화 실패는 비즈니스 로직에 영향을 주지 않도록 로그만 남김
+            // 실제 운영에서는 로깅 프레임워크 사용 권장
+            println("캐시 무효화 실패 (제휴사 ID: $partnerId): ${e.message}")
+        }
     }
 }
