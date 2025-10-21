@@ -267,4 +267,50 @@ class QueryPaymentsServiceTest {
         assertEquals(null, summaryFilterSlot.captured.status)
     }
 
+    @Test
+    @DisplayName("잘못된 상태 문자열인 경우 null로 처리해야 한다")
+    fun `잘못된 상태 문자열인 경우 null로 처리해야 한다`() {
+        // Given
+        val filter = QueryFilter(
+            partnerId = 1L,
+            status = "INVALID_STATUS",
+            limit = 10
+        )
+
+        val emptyPayments = emptyList<Payment>()
+        val pageResult = PaymentPage(
+            items = emptyPayments,
+            hasNext = false,
+            nextCursorCreatedAt = null,
+            nextCursorId = null
+        )
+
+        val summaryProjection = PaymentSummaryProjection(
+            count = 0L,
+            totalAmount = BigDecimal.ZERO,
+            totalNetAmount = BigDecimal.ZERO
+        )
+
+        // Mock 설정
+        every { cursorEncoder.decode(null) } returns null
+        every { paymentRepository.findBy(any<PaymentQuery>()) } returns pageResult
+        every { paymentRepository.summary(any<PaymentSummaryFilter>()) } returns summaryProjection
+
+        // When
+        val result = queryPaymentsService.query(filter)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(0, result.items.size)
+
+        // 검증 - 잘못된 상태는 null로 변환되어야 함
+        val querySlot = slot<PaymentQuery>()
+        verify { paymentRepository.findBy(capture(querySlot)) }
+        assertEquals(null, querySlot.captured.status)
+
+        val summaryFilterSlot = slot<PaymentSummaryFilter>()
+        verify { paymentRepository.summary(capture(summaryFilterSlot)) }
+        assertEquals(null, summaryFilterSlot.captured.status)
+    }
+
 }
