@@ -33,22 +33,18 @@ class QueryPaymentsService(
      *
      * 1. 커서 디코딩 (cursorEncoder.decode)
      * 2. 상태 변환 (String -> PaymentStatus) (PaymentStatusMapper.from)
-     * 3. 결제 목록 조회 - 커서 페이지네이션 (PaymentQueryHelper.fetchPayments) - 캐시 적용
-     * 4. 통계 조회 - 필터와 동일한 조건으로 조회 (PaymentSummaryHelper.fetchSummary) - 캐시 적용
+     * 3. 결제 목록 조회 - 커서 페이지네이션 (fetchPaymentsWithCache) - 캐시 적용
+     * 4. 통계 조회 - 필터와 동일한 조건으로 조회 (fetchSummaryWithCache) - 캐시 적용
      * 5. 다음 커서 생성 (PaymentCursorHelper.buildNextCursor)
      * 6. 조회 결과 반환 (QueryResult)
      */
     override fun query(filter: QueryFilter): QueryResult {
-        val startTime = System.currentTimeMillis()
+
         val cursorInfo = cursorEncoder.decode(filter.cursor)
         val paymentStatus = PaymentStatusMapper.from(filter.status)
-        val pageResult = fetchPaymentsWithCache(filter, paymentStatus, cursorInfo) // Cache-Aside 패턴: 캐시가 없으면 DB에서 조회 후 캐시에 저장
+        val pageResult = fetchPaymentsWithCache(filter, paymentStatus, cursorInfo)
         val summary = fetchSummaryWithCache(filter.partnerId, paymentStatus, filter.from, filter.to)
         val nextCursor = PaymentCursorHelper.buildNextCursor(pageResult, cursorEncoder)
-        val endTime = System.currentTimeMillis()
-        val executionTime = endTime - startTime
-
-        logger.info("[CACHE] 결제 조회 완료 - 실행시간: ${executionTime}ms, 조회건수: ${pageResult.items.size}, hasNext: ${pageResult.hasNext}")
 
         return QueryResult(
             items = pageResult.items,

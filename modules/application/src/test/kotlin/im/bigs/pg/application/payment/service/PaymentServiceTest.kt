@@ -2,6 +2,7 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.partner.manager.FeePolicyManager
 import im.bigs.pg.application.partner.manager.PartnerManager
+import im.bigs.pg.application.payment.manager.EnhancedPaymentCacheManager
 import im.bigs.pg.application.payment.manager.PaymentAuthorizationManager
 import im.bigs.pg.application.payment.manager.PaymentBuilder
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
@@ -34,7 +35,8 @@ class PaymentServiceTest {
     private val feePolicyManager = mockk<FeePolicyManager>()
     private val paymentBuilder = mockk<PaymentBuilder>()
     private val paymentRepository = mockk<PaymentOutPort>()
-    private val cacheManager = mockk<CacheManager>()
+    private val cacheManager = mockk<EnhancedPaymentCacheManager>()
+
 
     private val paymentService = PaymentService(
         partnerManager = partnerManager,
@@ -47,9 +49,8 @@ class PaymentServiceTest {
     )
 
     init {
-        // 캐시 무효화 관련 mock 설정 추가
-        every { cacheManager.getCache("paymentQueries")?.clear() } returns Unit // <- 추가
-        every { cacheManager.getCache("paymentSummaries")?.clear() } returns Unit // <- 추가
+        // 캐시 무효화 mock 설정
+        every { cacheManager.evictPartnerCache(any()) } just Runs
     }
 
 
@@ -127,8 +128,8 @@ class PaymentServiceTest {
         coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
         verify { feePolicyManager.findFeePolicy(partnerId) }
         verify { paymentRepository.save(expectedPayment) }
-        verify { cacheManager.getCache("paymentQueries")?.clear() }
-        verify { cacheManager.getCache("paymentSummaries")?.clear() }
+        verify { cacheManager.evictPartnerCache(partnerId) }
+
     }
 
     @Test
@@ -190,8 +191,8 @@ class PaymentServiceTest {
         coVerify { paymentAuthorizationManager.authorizePayment(pgClient, partnerId, command) }
         verify { feePolicyManager.findFeePolicy(partnerId) }
         verify { paymentRepository.save(expectedPayment) }
-        verify { cacheManager.getCache("paymentQueries")?.clear() }
-        verify { cacheManager.getCache("paymentSummaries")?.clear() }
+        verify { cacheManager.evictPartnerCache(partnerId) }
+
     }
 
     @Test
