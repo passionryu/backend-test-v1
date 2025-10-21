@@ -313,4 +313,57 @@ class QueryPaymentsServiceTest {
         assertEquals(null, summaryFilterSlot.captured.status)
     }
 
+    @Test
+    @DisplayName("더 이상 페이지가 없는 경우 nextCursor가 null이어야 한다")
+    fun `더 이상 페이지가 없는 경우 nextCursor가 null이어야 한다`() {
+        // Given
+        val filter = QueryFilter(
+            partnerId = 1L,
+            status = "APPROVED",
+            limit = 10
+        )
+
+        val payments = listOf(
+            Payment(
+                id = 1L,
+                partnerId = 1L,
+                amount = BigDecimal("10000"),
+                appliedFeeRate = BigDecimal("0.0235"),
+                feeAmount = BigDecimal("235"),
+                netAmount = BigDecimal("9765"),
+                status = PaymentStatus.APPROVED
+            )
+        )
+
+        val pageResult = PaymentPage(
+            items = payments,
+            hasNext = false, // 마지막 페이지
+            nextCursorCreatedAt = null,
+            nextCursorId = null
+        )
+
+        val summaryProjection = PaymentSummaryProjection(
+            count = 1L,
+            totalAmount = BigDecimal("10000"),
+            totalNetAmount = BigDecimal("9765")
+        )
+
+        // Mock 설정
+        every { cursorEncoder.decode(null) } returns null
+        every { paymentRepository.findBy(any<PaymentQuery>()) } returns pageResult
+        every { paymentRepository.summary(any<PaymentSummaryFilter>()) } returns summaryProjection
+
+        // When
+        val result = queryPaymentsService.query(filter)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(1, result.items.size)
+        assertNull(result.nextCursor)
+        assertEquals(false, result.hasNext)
+
+        // cursorEncoder.encode가 호출되지 않아야 함
+        verify(exactly = 0) { cursorEncoder.encode(any<Instant>(), any<Long>()) }
+    }
+
 }
