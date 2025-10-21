@@ -151,4 +151,53 @@ class QueryPaymentsServiceTest {
     }
 
 
+    @Test
+    @DisplayName("커서가 없는 경우 null 커서 정보로 조회해야 한다")
+    fun `커서가 없는 경우 null 커서 정보로 조회해야 한다`() {
+        // Given
+        val filter = QueryFilter(
+            partnerId = 1L,
+            status = "CANCELED",
+            cursor = null,
+            limit = 10
+        )
+
+        val emptyPayments = emptyList<Payment>()
+        val pageResult = PaymentPage(
+            items = emptyPayments,
+            hasNext = false,
+            nextCursorCreatedAt = null,
+            nextCursorId = null
+        )
+
+        val summaryProjection = PaymentSummaryProjection(
+            count = 0L,
+            totalAmount = BigDecimal.ZERO,
+            totalNetAmount = BigDecimal.ZERO
+        )
+
+        // Mock 설정
+        every { cursorEncoder.decode(null) } returns null
+        every { paymentRepository.findBy(any<PaymentQuery>()) } returns pageResult
+        every { paymentRepository.summary(any<PaymentSummaryFilter>()) } returns summaryProjection
+
+        // When
+        val result = queryPaymentsService.query(filter)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(0, result.items.size)
+        assertEquals(0L, result.summary.count)
+        assertNull(result.nextCursor)
+        assertEquals(false, result.hasNext)
+
+        // 검증
+        verify { cursorEncoder.decode(null) }
+
+        val querySlot = slot<PaymentQuery>()
+        verify { paymentRepository.findBy(capture(querySlot)) }
+        assertEquals(null, querySlot.captured.cursorCreatedAt)
+        assertEquals(null, querySlot.captured.cursorId)
+    }
+
 }
