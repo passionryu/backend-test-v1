@@ -60,7 +60,7 @@ Spring Boot 서버를 실행하면, DB와 Cache 서버가 연결이 됩니다.
 Patroni&etcd 기반의 Fail-Over 시스템을 통해 HA를 보장하였을 것입니다.   
 
 이에 대한 연구와 기록은 다음 페이지에 평소에 하고 있었습니다.   
-대규모 트래픽 연구 프로젝트 문서화 링크 : https://knotty-toast-80a.notion.site/26b1979809dd800681eff595e8dbe3bd?source=copy_link
+대규모 트래픽 연구 프로젝트 문서화 링크 : https://knotty-toast-80a.notion.site/26b1979809dd800681eff595e8dbe3bd?source=copy_link     
 대규모 트래픽 연구 프로젝트 Github 링크 : https://github.com/Research-Project-rsy/SessionServer
 
 부족한 제게 귀중한 기회를 주셔서 다시 한번 너무나도 감사하다는 말씀을 드립니다.
