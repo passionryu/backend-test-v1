@@ -200,4 +200,71 @@ class QueryPaymentsServiceTest {
         assertEquals(null, querySlot.captured.cursorId)
     }
 
+    @Test
+    @DisplayName("상태가 null인 경우 모든 상태로 조회해야 한다")
+    fun `상태가 null인 경우 모든 상태로 조회해야 한다`() {
+        // Given
+        val filter = QueryFilter(
+            partnerId = 1L,
+            status = null,
+            limit = 15
+        )
+
+        val mixedPayments = listOf(
+            Payment(
+                id = 1L,
+                partnerId = 1L,
+                amount = BigDecimal("10000"),
+                appliedFeeRate = BigDecimal("0.0235"),
+                feeAmount = BigDecimal("235"),
+                netAmount = BigDecimal("9765"),
+                status = PaymentStatus.APPROVED
+            ),
+            Payment(
+                id = 2L,
+                partnerId = 1L,
+                amount = BigDecimal("5000"),
+                appliedFeeRate = BigDecimal("0.0235"),
+                feeAmount = BigDecimal("118"),
+                netAmount = BigDecimal("4882"),
+                status = PaymentStatus.CANCELED
+            )
+        )
+
+        val pageResult = PaymentPage(
+            items = mixedPayments,
+            hasNext = false,
+            nextCursorCreatedAt = null,
+            nextCursorId = null
+        )
+
+        val summaryProjection = PaymentSummaryProjection(
+            count = 2L,
+            totalAmount = BigDecimal("15000"),
+            totalNetAmount = BigDecimal("14647")
+        )
+
+        // Mock 설정
+        every { cursorEncoder.decode(null) } returns null
+        every { paymentRepository.findBy(any<PaymentQuery>()) } returns pageResult
+        every { paymentRepository.summary(any<PaymentSummaryFilter>()) } returns summaryProjection
+
+        // When
+        val result = queryPaymentsService.query(filter)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(2, result.items.size)
+        assertEquals(2L, result.summary.count)
+
+        // 검증
+        val querySlot = slot<PaymentQuery>()
+        verify { paymentRepository.findBy(capture(querySlot)) }
+        assertEquals(null, querySlot.captured.status)
+
+        val summaryFilterSlot = slot<PaymentSummaryFilter>()
+        verify { paymentRepository.summary(capture(summaryFilterSlot)) }
+        assertEquals(null, summaryFilterSlot.captured.status)
+    }
+
 }
