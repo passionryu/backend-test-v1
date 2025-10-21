@@ -25,14 +25,14 @@ class PaymentPersistenceAdapter(
 
     override fun findBy(query: PaymentQuery): PaymentPage {
         val pageSize = query.limit
-        val list = repo.pageBy(
+        val list = repo.findPayments(
             partnerId = query.partnerId,
             status = query.status?.name,
             fromAt = query.from?.toInstant(ZoneOffset.UTC),
             toAt = query.to?.toInstant(ZoneOffset.UTC),
             cursorCreatedAt = query.cursorCreatedAt?.toInstant(ZoneOffset.UTC),
             cursorId = query.cursorId,
-            org = PageRequest.of(0, pageSize + 1),
+            pageable = PageRequest.of(0, pageSize + 1),
         )
         val hasNext = list.size > pageSize
         val items = list.take(pageSize)

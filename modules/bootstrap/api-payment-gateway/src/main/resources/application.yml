@@ -16,6 +16,27 @@ spring:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
 
+  # Redis 캐시 설정
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      jedis:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  # 캐시 설정
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000 # 10분
+      cache-null-values: false
+      enable-statistics: true
+
 # 우선은 Hard Coding 되어 있지만, 추후 환경변수로 대체 가능
 pg:
   client:
@@ -24,6 +45,16 @@ pg:
 
 server:
   port: 8080
+
+# 로깅 설정
+logging:
+  level:
+    im.bigs.pg.application.payment.service.QueryPaymentsService: INFO
+    im.bigs.pg.api.config.CacheConfig: INFO
+    org.springframework.cache: DEBUG
+    org.springframework.data.redis: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{36}] - %msg%n"
 
 # Actuator 설정
 management:

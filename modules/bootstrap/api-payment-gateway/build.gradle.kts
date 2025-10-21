@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.spring.boot.starter.jpa)
     implementation(libs.bundles.bootstrap)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.data.redis)
     implementation(libs.micrometer.registry.prometheus)
     testImplementation(libs.bundles.test)
     testImplementation(libs.spring.boot.starter.test) {
