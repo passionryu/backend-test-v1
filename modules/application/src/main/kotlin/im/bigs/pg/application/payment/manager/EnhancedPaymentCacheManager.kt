@@ -5,6 +5,9 @@ import org.springframework.stereotype.Component
 
 @Component
 class EnhancedPaymentCacheManager(private val cacheManager: CacheManager) {
+
+    private val logger = org.slf4j.LoggerFactory.getLogger(EnhancedPaymentCacheManager::class.java)
+
     /**
      * 특정 제휴사의 결제 조회 캐시를 무효화합니다.
      * 새 결제가 생성되면 해당 제휴사의 모든 조회 결과 캐시를 삭제하여
@@ -20,9 +23,7 @@ class EnhancedPaymentCacheManager(private val cacheManager: CacheManager) {
             val summaryCache = cacheManager.getCache("paymentSummaries")
             summaryCache?.clear()
         } catch (e: Exception) {
-            // 캐시 무효화 실패는 비즈니스 로직에 영향을 주지 않도록 로그만 남김
-            // 실제 운영에서는 로깅 프레임워크 사용 권장
-            println("캐시 무효화 실패 (제휴사 ID: $partnerId): ${e.message}")
+            logger.warn("캐시 무효화 실패 (제휴사 ID: $partnerId): ${e.message}")
         }
     }
 }

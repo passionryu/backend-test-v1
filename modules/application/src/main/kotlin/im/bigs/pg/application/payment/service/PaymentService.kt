@@ -40,7 +40,7 @@ class PaymentService(
      * 4. 수수료 정책 조회 및 수수료/정산금 계산 (feePolicyManager.findFeePolicy + FeeCalculator.calculateFee)
      * 5. 결제 객체 생성 (paymentBuilder.buildPayment)
      * 6. DB 저장 (paymentRepository.save)
-     * 7. 캐시 무효화 (해당 제휴사의 조회 결과 캐시 삭제)
+     * 7. 캐시 무효화 : 해당 제휴사의 조회 결과 캐시 삭제 (cacheManager.evictPartnerCache)
      */
     override suspend fun pay(command: PaymentCommand): Payment {
 
