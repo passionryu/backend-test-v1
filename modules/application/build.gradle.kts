@@ -14,4 +14,5 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     // For using common dir
     implementation(project(":modules:common"))
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 }

@@ -12,6 +12,8 @@ import im.bigs.pg.application.pg.manager.PgClientManager
 import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.payment.Payment
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+
 
 /**
  * 결제 생성 유스케이스 구현체.
@@ -42,6 +44,7 @@ class PaymentService(
      * 6. DB 저장 (paymentRepository.save)
      * 7. 캐시 무효화 : 해당 제휴사의 조회 결과 캐시 삭제 (cacheManager.evictPartnerCache)
      */
+    @Transactional
     override suspend fun pay(command: PaymentCommand): Payment {
 
         val partner = partnerManager.findPartner(command.partnerId)
