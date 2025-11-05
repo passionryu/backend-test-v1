@@ -2,10 +2,12 @@ package im.bigs.pg.api
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.cache.annotation.EnableCaching
 
 /**
  * API 실행 진입점. bootstrap 모듈은 실행/환경설정만을 담당합니다.
  */
+@EnableCaching
 @SpringBootApplication(scanBasePackages = ["im.bigs.pg"])
 class PgApiApplication
 

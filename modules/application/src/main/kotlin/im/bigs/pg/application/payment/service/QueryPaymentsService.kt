@@ -20,15 +20,13 @@ import org.springframework.stereotype.Service
  */
 @Service
 class QueryPaymentsService(
-    private val paymentRepository: PaymentOutPort,
     private val cursorEncoder: CursorEncoder,
     private val paymentQueryCacheService: PaymentQueryCacheService
 ) : QueryPaymentsUseCase {
 
-    private val logger = LoggerFactory.getLogger(QueryPaymentsService::class.java)
-
     /**
      * 결제 내역 조회를 순차적으로 수행합니다.
+     *
      * Cache-Aside 패턴 적용: 캐시에 없으면 DB 조회 후 캐시에 저장
      *
      * 1. 커서 디코딩 (cursorEncoder.decode)
@@ -57,7 +55,5 @@ class QueryPaymentsService(
             hasNext = pageResult.hasNext,
         )
     }
-
-    
 
 }
