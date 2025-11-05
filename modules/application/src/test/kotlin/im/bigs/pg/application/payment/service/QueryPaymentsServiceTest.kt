@@ -27,10 +27,11 @@ class QueryPaymentsServiceTest {
 
     private val paymentRepository = mockk<PaymentOutPort>()
     private val cursorEncoder = mockk<CursorEncoder>()
+    private val paymentQueryCacheService = PaymentQueryCacheService(paymentRepository)
 
     private val queryPaymentsService = QueryPaymentsService(
-        paymentRepository = paymentRepository,
-        cursorEncoder = cursorEncoder
+        cursorEncoder,
+        paymentQueryCacheService
     )
 
     @Test

@@ -27,9 +27,11 @@ dependencies {
     runtimeOnly(libs.database.h2)
     runtimeOnly(libs.database.mariadb)
 
-    // ✅ Liquibase + PostgreSQL
+    // Liquibase + PostgreSQL
     implementation("org.liquibase:liquibase-core:4.29.2")
     implementation("org.postgresql:postgresql:42.7.3")
+
+    implementation("org.springframework.boot:spring-boot-starter-web")
 
     testImplementation(libs.spring.boot.starter.test) {
         exclude(module = "mockito-core")
