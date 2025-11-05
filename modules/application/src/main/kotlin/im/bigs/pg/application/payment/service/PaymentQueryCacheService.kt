@@ -1,15 +1,16 @@
 package im.bigs.pg.application.payment.service
 
-import im.bigs.pg.application.payment.helper.PaymentQueryHelper
-import im.bigs.pg.application.payment.helper.PaymentSummaryHelper
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.payment.port.out.PaymentPage
+import im.bigs.pg.application.payment.port.out.PaymentQuery
+import im.bigs.pg.application.payment.port.out.PaymentSummaryFilter
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.domain.payment.PaymentSummary
 import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 /**
  * 결제 목록 및 통계 조회 시 캐시를 적용하는 서비스.
@@ -26,8 +27,6 @@ import org.springframework.stereotype.Service
 class PaymentQueryCacheService(
     private val paymentRepository: PaymentOutPort
 ) {
-
-    private val logger = LoggerFactory.getLogger(PaymentQueryCacheService::class.java)
 
     /**
      * 결제 목록을 캐시를 통해 조회한다.
@@ -46,9 +45,19 @@ class PaymentQueryCacheService(
     fun fetchPaymentsWithCache(
         filter: QueryFilter,
         paymentStatus: PaymentStatus?,
-        cursorInfo: Pair<java.time.LocalDateTime?, Long?>?
+        cursorInfo: Pair<LocalDateTime?, Long?>?
     ): PaymentPage {
-        return PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo)
+        return paymentRepository.findBy(
+            PaymentQuery(
+                partnerId = filter.partnerId,
+                status = paymentStatus,
+                from = filter.from,
+                to = filter.to,
+                limit = filter.limit,
+                cursorCreatedAt = cursorInfo?.first,
+                cursorId = cursorInfo?.second
+            )
+        )
     }
 
     /**
@@ -70,10 +79,17 @@ class PaymentQueryCacheService(
     fun fetchSummaryWithCache(
         partnerId: Long?,
         status: PaymentStatus?,
-        from: java.time.LocalDateTime?,
-        to: java.time.LocalDateTime?
+        from: LocalDateTime?,
+        to: LocalDateTime?
     ): PaymentSummary {
-        return PaymentSummaryHelper.fetchSummary(paymentRepository, partnerId, status, from, to)
+        val projection = paymentRepository.summary(
+            PaymentSummaryFilter(partnerId, status, from, to)
+        )
+        return PaymentSummary(
+            count = projection.count,
+            totalAmount = projection.totalAmount,
+            totalNetAmount = projection.totalNetAmount
+        )
     }
 }
 

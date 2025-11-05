@@ -1,16 +1,11 @@
 package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.payment.helper.PaymentCursorHelper
-import im.bigs.pg.application.payment.helper.PaymentQueryHelper
 import im.bigs.pg.application.payment.helper.PaymentStatusMapper
-import im.bigs.pg.application.payment.helper.PaymentSummaryHelper
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
 import im.bigs.pg.application.payment.port.`in`.QueryResult
-import im.bigs.pg.application.payment.port.out.PaymentOutPort
-import im.bigs.pg.application.payment.port.out.PaymentPage
 import im.bigs.pg.domain.payment.PaymentSummary
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
