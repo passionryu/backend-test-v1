@@ -3,6 +3,7 @@ package im.bigs.pg.application.payment.helper
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.domain.payment.PaymentStatus
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.jvm.JvmStatic
 
 /**
  * 결제 캐시 키 생성 헬퍼
@@ -18,6 +19,7 @@ object PaymentCacheKeyHelper {
      * @param paymentStatus 결제 상태
      * @param cursorInfo 커서 정보 (첫 번째 페이지의 경우 null)
      */
+    @JvmStatic
     fun generateQueryCacheKey(
         filter: QueryFilter,
         paymentStatus: PaymentStatus?,
@@ -50,6 +52,7 @@ object PaymentCacheKeyHelper {
      * @param from 조회 시작 시각
      * @param to 조회 종료 시각
      */
+    @JvmStatic
     fun generateSummaryCacheKey(
         partnerId: Long?,
         paymentStatus: PaymentStatus?,

@@ -11,7 +11,6 @@ import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.payment.port.out.PaymentPage
 import im.bigs.pg.domain.payment.PaymentSummary
 import org.slf4j.LoggerFactory
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 /**
@@ -22,7 +21,8 @@ import org.springframework.stereotype.Service
 @Service
 class QueryPaymentsService(
     private val paymentRepository: PaymentOutPort,
-    private val cursorEncoder: CursorEncoder
+    private val cursorEncoder: CursorEncoder,
+    private val paymentQueryCacheService: PaymentQueryCacheService
 ) : QueryPaymentsUseCase {
 
     private val logger = LoggerFactory.getLogger(QueryPaymentsService::class.java)
@@ -42,8 +42,8 @@ class QueryPaymentsService(
 
         val cursorInfo = cursorEncoder.decode(filter.cursor)
         val paymentStatus = PaymentStatusMapper.from(filter.status)
-        val pageResult = fetchPaymentsWithCache(filter, paymentStatus, cursorInfo)
-        val summary = fetchSummaryWithCache(filter.partnerId, paymentStatus, filter.from, filter.to)
+        val pageResult = paymentQueryCacheService.fetchPaymentsWithCache(filter, paymentStatus, cursorInfo)
+        val summary = paymentQueryCacheService.fetchSummaryWithCache(filter.partnerId, paymentStatus, filter.from, filter.to)
         val nextCursor = PaymentCursorHelper.buildNextCursor(pageResult, cursorEncoder)
 
         return QueryResult(
@@ -58,39 +58,6 @@ class QueryPaymentsService(
         )
     }
 
-    /**
-     * 캐시를 활용한 결제 목록 조회 (Cache-Aside 패턴)
-     */
-    @Cacheable(value = ["paymentQueries"], key = "T(im.bigs.pg.application.payment.helper.PaymentCacheKeyHelper).generateQueryCacheKey(#filter, #paymentStatus, #cursorInfo)")
-    private fun fetchPaymentsWithCache(
-        filter: QueryFilter,
-        paymentStatus: im.bigs.pg.domain.payment.PaymentStatus?,
-        cursorInfo: Pair<java.time.LocalDateTime?, Long?>?
-    ): PaymentPage {
-        val startTime = System.currentTimeMillis()
-        val result = PaymentQueryHelper.fetchPayments(paymentRepository, filter, paymentStatus, cursorInfo)
-        val endTime = System.currentTimeMillis()
-
-        logger.info("[CACHE] 결제 목록 조회 완료 - 실행시간: ${endTime - startTime}ms, 결과건수: ${result.items.size}")
-        return result
-    }
-
-    /**
-     * 캐시를 활용한 결제 통계 조회 (Cache-Aside 패턴)
-     */
-    @Cacheable(value = ["paymentSummaries"], key = "T(im.bigs.pg.application.payment.helper.PaymentCacheKeyHelper).generateSummaryCacheKey(#partnerId, #status, #from, #to)")
-    private fun fetchSummaryWithCache(
-        partnerId: Long?,
-        status: im.bigs.pg.domain.payment.PaymentStatus?,
-        from: java.time.LocalDateTime?,
-        to: java.time.LocalDateTime?
-    ): PaymentSummary {
-        val startTime = System.currentTimeMillis()
-        val result = PaymentSummaryHelper.fetchSummary(paymentRepository, partnerId, status, from, to)
-        val endTime = System.currentTimeMillis()
-
-        logger.info("[CACHE] 결제 통계 조회 완료 - 실행시간: ${endTime - startTime}ms, count: ${result.count}, totalAmount: ${result.totalAmount}")
-        return result
-    }
+    
 
 }
