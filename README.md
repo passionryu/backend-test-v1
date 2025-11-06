@@ -15,6 +15,14 @@
   
   ---
 
+# 추가 과제 구현 
+* Data Base 마이그레이션 : H2 ->(LiquiBase) -> PostgreSQL
+* 오픈API 문서화 : [Swagger 페이지](http://localhost:8080/swagger-ui/index.html#/)
+* Prometheus/Grafana 기반 모니터링 시스템 : [JVM 공유 대시보드]( http://localhost:3000/d/24437602-aaf4-47be-b334-4462a123a33d/jvm-micrometer?orgId=1&from=now-5m&to=now&timezone=browser&var-application=&var-instance=host.docker.internal:8080&var-jvm_memory_pool_heap=$__all&var-jvm_memory_pool_nonheap=$__all&var-jvm_buffer_pool=$__all&refresh=5s)
+* Redis 기반 캐싱 시스템 적용 : TTL커스터마이징, Cache Eviction 전략 적용 등을 통한 조회 성능 개선 및 DataBase 부하 감소
+
+# 기타
+
 <details>
 <summary>구현 범위</summary>
 
@@ -45,3 +53,14 @@
 - **코드 리뷰:** Code Rabbit AI를 활용한 코드 리뷰  
 
 </details>
+
+## 만약, 시간이 더 있었다면 ...
+안정성이 중요한 결제시스템의 DB에 CQRS 패턴과 Primary-Replica 구조를 적용하여 대규모 트래픽을 제어할 것이고,     
+Patroni&etcd 기반의 Fail-Over 시스템을 통해 HA를 보장하였을 것입니다.   
+
+이에 대한 연구와 기록은 다음 페이지에 평소에 하고 있었습니다.
+### 1. 대규모 트래픽 연구 프로젝트 문서화 링크 : 
+https://knotty-toast-80a.notion.site/26b1979809dd800681eff595e8dbe3bd?source=copy_link     
+### 2. 대규모 트래픽 연구 프로젝트 Github 링크 : 
+https://github.com/Research-Project-rsy/SessionServer
+
